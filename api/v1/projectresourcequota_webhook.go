@@ -17,11 +17,37 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
+
+var resourceNameList = []corev1.ResourceName{
+	corev1.ResourceCPU,
+	corev1.ResourceMemory,
+	corev1.ResourceStorage,
+	corev1.ResourceEphemeralStorage,
+	corev1.ResourcePods,
+	corev1.ResourceServices,
+	corev1.ResourceReplicationControllers,
+	corev1.ResourceQuotas,
+	corev1.ResourceSecrets,
+	corev1.ResourceConfigMaps,
+	corev1.ResourcePersistentVolumeClaims,
+	corev1.ResourceServicesNodePorts,
+	corev1.ResourceServicesLoadBalancers,
+	corev1.ResourceRequestsCPU,
+	corev1.ResourceRequestsMemory,
+	corev1.ResourceRequestsStorage,
+	corev1.ResourceRequestsEphemeralStorage,
+	corev1.ResourceLimitsCPU,
+	corev1.ResourceLimitsMemory,
+	corev1.ResourceLimitsEphemeralStorage,
+}
 
 // log is for logging in this package.
 var projectresourcequotalog = logf.Log.WithName("projectresourcequota-resource")
@@ -32,44 +58,37 @@ func (r *ProjectResourceQuota) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-jenting-io-v1-projectresourcequota,mutating=true,failurePolicy=fail,sideEffects=None,groups=jenting.io,resources=projectresourcequotas,verbs=create;update,versions=v1,name=mprojectresourcequota.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &ProjectResourceQuota{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *ProjectResourceQuota) Default() {
-	projectresourcequotalog.Info("default", "name", r.Name)
+func (r *ProjectResourceQuota) Default() {}
 
-	// TODO(user): fill in your defaulting logic.
-}
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-jenting-io-v1-projectresourcequota,mutating=false,failurePolicy=fail,sideEffects=None,groups=jenting.io,resources=projectresourcequotas,verbs=create;update,versions=v1,name=vprojectresourcequota.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &ProjectResourceQuota{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *ProjectResourceQuota) ValidateCreate() error {
-	projectresourcequotalog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ProjectResourceQuota) ValidateUpdate(old runtime.Object) error {
-	projectresourcequotalog.Info("validate update", "name", r.Name)
+	projectresourcequotalog.Info("Validating ProjectResourceQuota")
 
-	// TODO(user): fill in your validation logic upon object update.
+	for _, resourceName := range resourceNameList {
+		hard := r.Spec.Hard[resourceName]
+		used := r.Status.Used[resourceName]
+		if hard.Cmp(used) == -1 {
+			return fmt.Errorf("hard limit %s is less than used %s", hard.String(), used.String())
+		}
+	}
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *ProjectResourceQuota) ValidateDelete() error {
-	projectresourcequotalog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
 }
