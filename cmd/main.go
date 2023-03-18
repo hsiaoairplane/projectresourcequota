@@ -100,6 +100,34 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ProjectResourceQuota")
 		os.Exit(1)
 	}
+	if err = jentingiov1.SetupPodWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Pod")
+		os.Exit(1)
+	}
+	if err = jentingiov1.SetupServiceWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Service")
+		os.Exit(1)
+	}
+	if err = jentingiov1.SetupReplicationControllerWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ReplicationController")
+		os.Exit(1)
+	}
+	if err = jentingiov1.SetupResourceQuotaWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ResourceQuota")
+		os.Exit(1)
+	}
+	if err = jentingiov1.SetupSecretWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Secret")
+		os.Exit(1)
+	}
+	if err = jentingiov1.SetupConfigMapWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "ConfigMap")
+		os.Exit(1)
+	}
+	if err = jentingiov1.SetupPersistentVolumeClaimWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "PersistentVolumeClaim")
+		os.Exit(1)
+	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
