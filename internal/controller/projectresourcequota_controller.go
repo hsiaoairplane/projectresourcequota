@@ -214,7 +214,7 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 // SetupWithManager sets up the controller with the Manager.
 func (r *ProjectResourceQuotaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&jentingiov1.ProjectResourceQuota{}).
+		For(&jentingiov1.ProjectResourceQuota{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, // ConfigMap
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
