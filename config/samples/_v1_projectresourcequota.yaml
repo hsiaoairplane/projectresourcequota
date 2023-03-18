@@ -9,4 +9,12 @@ metadata:
     app.kubernetes.io/created-by: projectresourcequota
   name: projectresourcequota-sample
 spec:
-  # TODO(user): Add fields here
+  namespaces:
+  - foo
+  - bar
+  - default
+  hard:
+    configmaps: 1
+    cpu: "1000"
+    memory: 200Gi
+    pods: "10"
