@@ -28,9 +28,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// log is for logging in this package.
-// var secretlog = logf.Log.WithName("secret-resource")
-
 func SetupSecretWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&corev1.Secret{}).

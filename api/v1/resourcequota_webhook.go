@@ -28,9 +28,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// log is for logging in this package.
-// var resourceQuotaLog = logf.Log.WithName("resourcequota-resource")
-
 func SetupResourceQuotaWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&corev1.ResourceQuota{}).
