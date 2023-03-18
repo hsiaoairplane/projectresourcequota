@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -25,22 +26,25 @@ import (
 
 // ProjectResourceQuotaSpec defines the desired state of ProjectResourceQuota
 type ProjectResourceQuotaSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of ProjectResourceQuota. Edit projectresourcequota_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	//+required
+	Namespaces []string `json:"namespaces"`
+	//+optional
+	Hard corev1.ResourceList `json:"hard,omitempty"`
 }
 
 // ProjectResourceQuotaStatus defines the observed state of ProjectResourceQuota
 type ProjectResourceQuotaStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	//+optional
+	Used corev1.ResourceList `json:"used,omitempty" protobuf:"bytes,2,rep,name=used,casttype=ResourceList,castkey=ResourceName"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:resource:shortName=prq
+//+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".spec.namespaces",description="Namespaces"
+//+kubebuilder:printcolumn:name="Hard",type="string",JSONPath=".spec.hard",description="Hard"
+//+kubebuilder:printcolumn:name="Used",type="string",JSONPath=".status.used",description="Used"
 
 // ProjectResourceQuota is the Schema for the projectresourcequotas API
 type ProjectResourceQuota struct {

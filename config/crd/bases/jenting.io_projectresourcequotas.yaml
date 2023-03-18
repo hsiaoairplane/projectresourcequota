@@ -12,10 +12,25 @@ spec:
     kind: ProjectResourceQuota
     listKind: ProjectResourceQuotaList
     plural: projectresourcequotas
+    shortNames:
+    - prq
     singular: projectresourcequota
-  scope: Cluster
+  scope: Namespaced
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Namespaces
+      jsonPath: .spec.namespaces
+      name: Namespaces
+      type: string
+    - description: Hard
+      jsonPath: .spec.hard
+      name: Hard
+      type: string
+    - description: Used
+      jsonPath: .status.used
+      name: Used
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: ProjectResourceQuota is the Schema for the projectresourcequotas
@@ -36,14 +51,35 @@ spec:
           spec:
             description: ProjectResourceQuotaSpec defines the desired state of ProjectResourceQuota
             properties:
-              foo:
-                description: Foo is an example field of ProjectResourceQuota. Edit
-                  projectresourcequota_types.go to remove/update
-                type: string
+              hard:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: ResourceList is a set of (resource name, quantity) pairs.
+                type: object
+              namespaces:
+                items:
+                  type: string
+                type: array
+            required:
+            - namespaces
             type: object
           status:
             description: ProjectResourceQuotaStatus defines the observed state of
               ProjectResourceQuota
+            properties:
+              used:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: ResourceList is a set of (resource name, quantity) pairs.
+                type: object
             type: object
         type: object
     served: true
