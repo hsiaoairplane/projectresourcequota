@@ -65,9 +65,13 @@ make deploy IMG=<some-registry>/resourcequota:tag
 ```
 
 ### Usage
-1. Install Instances of Custom Resources:
+1. Install Instances of Custom Resources (CRs):
 ```sh
 kubectl apply -f config/samples/
+```
+2. View the Custom Resources (CRs):
+```sh
+kubectl get prq
 ```
 
 ### Uninstall
