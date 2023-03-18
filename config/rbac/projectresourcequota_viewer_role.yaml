@@ -1,0 +1,27 @@
+# permissions for end users to view projectresourcequotas.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: projectresourcequota-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: projectresourcequota
+    app.kubernetes.io/part-of: projectresourcequota
+    app.kubernetes.io/managed-by: kustomize
+  name: projectresourcequota-viewer-role
+rules:
+- apiGroups:
+  - jenting.io
+  resources:
+  - projectresourcequotas
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - jenting.io
+  resources:
+  - projectresourcequotas/status
+  verbs:
+  - get
