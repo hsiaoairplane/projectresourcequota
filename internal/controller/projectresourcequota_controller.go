@@ -76,93 +76,134 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 	})
 
 	// ConfigMap
-	cmList := &corev1.ConfigMapList{}
-	if err := r.Client.List(ctx, cmList, listOptions); err != nil {
-		return ctrl.Result{}, err
+	if _, found := rs.Spec.Hard[corev1.ResourceConfigMaps]; found {
+		cmList := &corev1.ConfigMapList{}
+		if err := r.Client.List(ctx, cmList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourceConfigMaps] = resource.MustParse(fmt.Sprintf("%d", len(cmList.Items)))
 	}
-	rs.Status.Used[corev1.ResourceConfigMaps] = resource.MustParse(fmt.Sprintf("%d", len(cmList.Items)))
 
 	// PersistentVolumeClaim
-	pvcList := &corev1.PersistentVolumeClaimList{}
-	if err := r.Client.List(ctx, pvcList, listOptions); err != nil {
-		return ctrl.Result{}, err
+	if _, found := rs.Spec.Hard[corev1.ResourcePersistentVolumeClaims]; found {
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		if err := r.Client.List(ctx, pvcList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourcePersistentVolumeClaims] = resource.MustParse(fmt.Sprintf("%d", len(pvcList.Items)))
 	}
-	rs.Status.Used[corev1.ResourcePersistentVolumeClaims] = resource.MustParse(fmt.Sprintf("%d", len(pvcList.Items)))
 
 	// Pod
-	podList := &corev1.PodList{}
-	if err := r.Client.List(ctx, podList, listOptions); err != nil {
-		return ctrl.Result{}, err
-	}
-	rs.Status.Used[corev1.ResourcePods] = resource.MustParse(fmt.Sprintf("%d", len(podList.Items)))
+	if _, found := rs.Spec.Hard[corev1.ResourcePods]; found {
+		podList := &corev1.PodList{}
+		if err := r.Client.List(ctx, podList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourcePods] = resource.MustParse(fmt.Sprintf("%d", len(podList.Items)))
 
-	var requestCPU, requestMemory, requestStorage, requestEphemeralStorage resource.Quantity
-	var limitCPU, limitMemory, limitEphemeralStorage resource.Quantity
-	for _, pod := range podList.Items {
-		for _, container := range pod.Spec.Containers {
-			requestCPU.Add(container.Resources.Requests[corev1.ResourceCPU])
-			requestMemory.Add(container.Resources.Requests[corev1.ResourceMemory])
-			requestStorage.Add(container.Resources.Requests[corev1.ResourceStorage])
-			requestEphemeralStorage.Add(container.Resources.Requests[corev1.ResourceEphemeralStorage])
+		var requestCPU, requestMemory, requestStorage, requestEphemeralStorage resource.Quantity
+		var limitCPU, limitMemory, limitEphemeralStorage resource.Quantity
+		for _, pod := range podList.Items {
+			for _, container := range pod.Spec.Containers {
+				requestCPU.Add(container.Resources.Requests[corev1.ResourceCPU])
+				requestMemory.Add(container.Resources.Requests[corev1.ResourceMemory])
+				requestStorage.Add(container.Resources.Requests[corev1.ResourceStorage])
+				requestEphemeralStorage.Add(container.Resources.Requests[corev1.ResourceEphemeralStorage])
 
-			limitCPU.Add(container.Resources.Limits[corev1.ResourceLimitsCPU])
-			limitMemory.Add(container.Resources.Limits[corev1.ResourceLimitsMemory])
-			limitEphemeralStorage.Add(container.Resources.Limits[corev1.ResourceLimitsEphemeralStorage])
+				limitCPU.Add(container.Resources.Limits[corev1.ResourceLimitsCPU])
+				limitMemory.Add(container.Resources.Limits[corev1.ResourceLimitsMemory])
+				limitEphemeralStorage.Add(container.Resources.Limits[corev1.ResourceLimitsEphemeralStorage])
+			}
+		}
+
+		if _, found := rs.Spec.Hard[corev1.ResourceCPU]; found {
+			rs.Status.Used[corev1.ResourceCPU] = requestCPU
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceRequestsCPU]; found {
+			rs.Status.Used[corev1.ResourceRequestsCPU] = requestCPU
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceMemory]; found {
+			rs.Status.Used[corev1.ResourceMemory] = requestMemory
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceRequestsMemory]; found {
+			rs.Status.Used[corev1.ResourceRequestsMemory] = requestMemory
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceStorage]; found {
+			rs.Status.Used[corev1.ResourceStorage] = requestStorage
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceRequestsStorage]; found {
+			rs.Status.Used[corev1.ResourceRequestsStorage] = requestStorage
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceEphemeralStorage]; found {
+			rs.Status.Used[corev1.ResourceEphemeralStorage] = requestEphemeralStorage
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceRequestsEphemeralStorage]; found {
+			rs.Status.Used[corev1.ResourceRequestsEphemeralStorage] = requestEphemeralStorage
+		}
+
+		if _, found := rs.Spec.Hard[corev1.ResourceLimitsCPU]; found {
+			rs.Status.Used[corev1.ResourceLimitsCPU] = limitCPU
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceLimitsMemory]; found {
+			rs.Status.Used[corev1.ResourceLimitsMemory] = limitMemory
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]; found {
+			rs.Status.Used[corev1.ResourceLimitsEphemeralStorage] = limitEphemeralStorage
 		}
 	}
-
-	rs.Status.Used[corev1.ResourceCPU] = requestCPU
-	rs.Status.Used[corev1.ResourceRequestsCPU] = requestCPU
-	rs.Status.Used[corev1.ResourceMemory] = requestMemory
-	rs.Status.Used[corev1.ResourceRequestsMemory] = requestMemory
-	rs.Status.Used[corev1.ResourceStorage] = requestStorage
-	rs.Status.Used[corev1.ResourceRequestsStorage] = requestStorage
-	rs.Status.Used[corev1.ResourceEphemeralStorage] = requestEphemeralStorage
-	rs.Status.Used[corev1.ResourceRequestsEphemeralStorage] = requestEphemeralStorage
-
-	rs.Status.Used[corev1.ResourceLimitsCPU] = limitCPU
-	rs.Status.Used[corev1.ResourceLimitsMemory] = limitMemory
-	rs.Status.Used[corev1.ResourceLimitsEphemeralStorage] = limitEphemeralStorage
 
 	// ReplicationController
-	rcList := &corev1.ReplicationControllerList{}
-	if err := r.Client.List(ctx, rcList, listOptions); err != nil {
-		return ctrl.Result{}, err
+	if _, found := rs.Spec.Hard[corev1.ResourceReplicationControllers]; found {
+		rcList := &corev1.ReplicationControllerList{}
+		if err := r.Client.List(ctx, rcList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourceReplicationControllers] = resource.MustParse(fmt.Sprintf("%d", len(rcList.Items)))
 	}
-	rs.Status.Used[corev1.ResourceReplicationControllers] = resource.MustParse(fmt.Sprintf("%d", len(rcList.Items)))
 
 	// ResourceQuota
-	rqList := &corev1.ResourceQuotaList{}
-	if err := r.Client.List(ctx, rqList, listOptions); err != nil {
-		return ctrl.Result{}, err
+	if _, found := rs.Spec.Hard[corev1.ResourceQuotas]; found {
+		rqList := &corev1.ResourceQuotaList{}
+		if err := r.Client.List(ctx, rqList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourceQuotas] = resource.MustParse(fmt.Sprintf("%d", len(rqList.Items)))
 	}
-	rs.Status.Used[corev1.ResourceQuotas] = resource.MustParse(fmt.Sprintf("%d", len(rqList.Items)))
 
 	// Secret
-	secretList := &corev1.SecretList{}
-	if err := r.Client.List(ctx, secretList, listOptions); err != nil {
-		return ctrl.Result{}, err
+	if _, found := rs.Spec.Hard[corev1.ResourceSecrets]; found {
+		secretList := &corev1.SecretList{}
+		if err := r.Client.List(ctx, secretList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourceSecrets] = resource.MustParse(fmt.Sprintf("%d", len(secretList.Items)))
 	}
-	rs.Status.Used[corev1.ResourceSecrets] = resource.MustParse(fmt.Sprintf("%d", len(secretList.Items)))
 
 	// Service
-	svcList := &corev1.ServiceList{}
-	if err := r.Client.List(ctx, svcList, listOptions); err != nil {
-		return ctrl.Result{}, err
-	}
-	rs.Status.Used[corev1.ResourceServices] = resource.MustParse(fmt.Sprintf("%d", len(svcList.Items)))
+	if _, found := rs.Spec.Hard[corev1.ResourceServices]; found {
+		svcList := &corev1.ServiceList{}
+		if err := r.Client.List(ctx, svcList, listOptions); err != nil {
+			return ctrl.Result{}, err
+		}
+		rs.Status.Used[corev1.ResourceServices] = resource.MustParse(fmt.Sprintf("%d", len(svcList.Items)))
 
-	var npCount, lbCount int
-	for _, svc := range svcList.Items {
-		switch svc.Spec.Type {
-		case corev1.ServiceTypeNodePort:
-			npCount++
-		case corev1.ServiceTypeLoadBalancer:
-			lbCount++
+		var npCount, lbCount int
+		for _, svc := range svcList.Items {
+			switch svc.Spec.Type {
+			case corev1.ServiceTypeNodePort:
+				npCount++
+			case corev1.ServiceTypeLoadBalancer:
+				lbCount++
+			}
+		}
+
+		if _, found := rs.Spec.Hard[corev1.ResourceServicesNodePorts]; found {
+			rs.Status.Used[corev1.ResourceServicesNodePorts] = resource.MustParse(fmt.Sprintf("%d", npCount))
+		}
+		if _, found := rs.Spec.Hard[corev1.ResourceServicesLoadBalancers]; found {
+			rs.Status.Used[corev1.ResourceServicesLoadBalancers] = resource.MustParse(fmt.Sprintf("%d", lbCount))
 		}
 	}
-	rs.Status.Used[corev1.ResourceServicesNodePorts] = resource.MustParse(fmt.Sprintf("%d", npCount))
-	rs.Status.Used[corev1.ResourceServicesLoadBalancers] = resource.MustParse(fmt.Sprintf("%d", lbCount))
 
 	if err := r.Status().Update(ctx, rs); err != nil {
 		return ctrl.Result{}, err
