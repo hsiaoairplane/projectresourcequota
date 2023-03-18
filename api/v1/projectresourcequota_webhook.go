@@ -49,6 +49,29 @@ var resourceNameList = []corev1.ResourceName{
 	corev1.ResourceLimitsEphemeralStorage,
 }
 
+var resourceNameMap = map[corev1.ResourceName]struct{}{
+	corev1.ResourceCPU:                      struct{}{},
+	corev1.ResourceMemory:                   struct{}{},
+	corev1.ResourceStorage:                  struct{}{},
+	corev1.ResourceEphemeralStorage:         struct{}{},
+	corev1.ResourcePods:                     struct{}{},
+	corev1.ResourceServices:                 struct{}{},
+	corev1.ResourceReplicationControllers:   struct{}{},
+	corev1.ResourceQuotas:                   struct{}{},
+	corev1.ResourceSecrets:                  struct{}{},
+	corev1.ResourceConfigMaps:               struct{}{},
+	corev1.ResourcePersistentVolumeClaims:   struct{}{},
+	corev1.ResourceServicesNodePorts:        struct{}{},
+	corev1.ResourceServicesLoadBalancers:    struct{}{},
+	corev1.ResourceRequestsCPU:              struct{}{},
+	corev1.ResourceRequestsMemory:           struct{}{},
+	corev1.ResourceRequestsStorage:          struct{}{},
+	corev1.ResourceRequestsEphemeralStorage: struct{}{},
+	corev1.ResourceLimitsCPU:                struct{}{},
+	corev1.ResourceLimitsMemory:             struct{}{},
+	corev1.ResourceLimitsEphemeralStorage:   struct{}{},
+}
+
 func SetupProjectResourceQuotaWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&ProjectResourceQuota{}).
@@ -75,9 +98,23 @@ type projectResourceQuotaValidator struct {
 	client.Client
 }
 
+func (v *projectResourceQuotaValidator) validateResourceName(ctx context.Context, rl corev1.ResourceList) error {
+	for resourceName := range rl {
+		if _, found := resourceNameMap[resourceName]; !found {
+			return fmt.Errorf("resource name %s is not supported", resourceName)
+		}
+	}
+	return nil
+}
+
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return nil
+	prq, ok := obj.(*ProjectResourceQuota)
+	if !ok {
+		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", obj)
+	}
+
+	return v.validateResourceName(ctx, prq.Spec.Hard)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -85,6 +122,10 @@ func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldO
 	prq, ok := newObj.(*ProjectResourceQuota)
 	if !ok {
 		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", newObj)
+	}
+
+	if err := v.validateResourceName(ctx, prq.Spec.Hard); err != nil {
+		return err
 	}
 
 	for _, resourceName := range resourceNameList {
