@@ -96,7 +96,7 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "ProjectResourceQuota")
 		os.Exit(1)
 	}
-	if err = (&jentingiov1.ProjectResourceQuota{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = jentingiov1.SetupProjectResourceQuotaWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "ProjectResourceQuota")
 		os.Exit(1)
 	}

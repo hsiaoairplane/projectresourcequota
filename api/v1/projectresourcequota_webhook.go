@@ -17,13 +17,13 @@ limitations under the License.
 package v1
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var resourceNameList = []corev1.ResourceName{
@@ -49,38 +49,47 @@ var resourceNameList = []corev1.ResourceName{
 	corev1.ResourceLimitsEphemeralStorage,
 }
 
-// log is for logging in this package.
-var projectresourcequotalog = logf.Log.WithName("projectresourcequota-resource")
-
-func (r *ProjectResourceQuota) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func SetupProjectResourceQuotaWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
+		For(&ProjectResourceQuota{}).
+		WithDefaulter(&projectResourceQuotaAnnotator{mgr.GetClient()}).
+		WithValidator(&projectResourceQuotaValidator{mgr.GetClient()}).
 		Complete()
 }
 
 //+kubebuilder:webhook:path=/mutate-jenting-io-v1-projectresourcequota,mutating=true,failurePolicy=fail,sideEffects=None,groups=jenting.io,resources=projectresourcequotas,verbs=create;update,versions=v1,name=mprojectresourcequota.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &ProjectResourceQuota{}
+// projectResourceQuotaAnnotator annotates ProjectResourceQuotas
+type projectResourceQuotaAnnotator struct {
+	client.Client
+}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *ProjectResourceQuota) Default() {}
+func (a *projectResourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+	return nil
+}
 
 //+kubebuilder:webhook:path=/validate-jenting-io-v1-projectresourcequota,mutating=false,failurePolicy=fail,sideEffects=None,groups=jenting.io,resources=projectresourcequotas,verbs=create;update,versions=v1,name=vprojectresourcequota.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &ProjectResourceQuota{}
+// projectResourceQuotaValidator validates ProjectResourceQuotas
+type projectResourceQuotaValidator struct {
+	client.Client
+}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *ProjectResourceQuota) ValidateCreate() error {
+func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *ProjectResourceQuota) ValidateUpdate(old runtime.Object) error {
-	projectresourcequotalog.Info("Validating ProjectResourceQuota")
+func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	prq, ok := newObj.(*ProjectResourceQuota)
+	if !ok {
+		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", newObj)
+	}
 
 	for _, resourceName := range resourceNameList {
-		hard := r.Spec.Hard[resourceName]
-		used := r.Status.Used[resourceName]
+		hard := prq.Spec.Hard[resourceName]
+		used := prq.Status.Used[resourceName]
 		if hard.Cmp(used) == -1 {
 			return fmt.Errorf("hard limit %s is less than used %s", hard.String(), used.String())
 		}
@@ -89,6 +98,6 @@ func (r *ProjectResourceQuota) ValidateUpdate(old runtime.Object) error {
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *ProjectResourceQuota) ValidateDelete() error {
+func (v *projectResourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
 	return nil
 }
