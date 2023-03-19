@@ -98,6 +98,29 @@ type projectResourceQuotaValidator struct {
 	client.Client
 }
 
+// validateNamespace validates the spec.namespaces is not in other CRs
+func (v *projectResourceQuotaValidator) validateNamespace(ctx context.Context, prqName string, prqNamespaces []string) error {
+	prqList := &ProjectResourceQuotaList{}
+	if err := v.Client.List(ctx, prqList); err != nil {
+		return err
+	}
+
+	for _, prq := range prqList.Items {
+		// validate the other projectresourcequota CRs only
+		if prqName != prq.Name {
+			for _, namespace := range prq.Spec.Namespaces {
+				for _, prqNamepsace := range prqNamespaces {
+					if namespace == prqNamepsace {
+						return fmt.Errorf("namespace %s is already in project %s", prqNamepsace, prq.Name)
+					}
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// validateResourceName validates the given resource name is supported
 func (v *projectResourceQuotaValidator) validateResourceName(ctx context.Context, rl corev1.ResourceList) error {
 	for resourceName := range rl {
 		if _, found := resourceNameMap[resourceName]; !found {
@@ -114,6 +137,12 @@ func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj 
 		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", obj)
 	}
 
+	// validate the spec.namespaces is not in other CRs
+	if err := v.validateNamespace(ctx, prq.Name, prq.Spec.Namespaces); err != nil {
+		return err
+	}
+
+	// validate the given resource name is supported
 	return v.validateResourceName(ctx, prq.Spec.Hard)
 }
 
@@ -124,10 +153,17 @@ func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldO
 		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", newObj)
 	}
 
+	// validate the spec.namespaces is not in other CRs
+	if err := v.validateNamespace(ctx, prq.Name, prq.Spec.Namespaces); err != nil {
+		return err
+	}
+
+	// validate the given resource name is supported
 	if err := v.validateResourceName(ctx, prq.Spec.Hard); err != nil {
 		return err
 	}
 
+	// validates the spec.hard is not less than status.used
 	for _, resourceName := range resourceNameList {
 		hard := prq.Spec.Hard[resourceName]
 		used := prq.Status.Used[resourceName]
