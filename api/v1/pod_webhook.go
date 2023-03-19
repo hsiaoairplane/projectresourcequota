@@ -69,7 +69,7 @@ func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
 					pod.Annotations = map[string]string{}
 				}
 				pod.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated Pod")
+				log.Info("Pod Labeled")
 				return nil
 			}
 		}
@@ -95,7 +95,7 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) e
 	log.Info("Validating Pod")
 	prqName, found := pod.Annotations[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

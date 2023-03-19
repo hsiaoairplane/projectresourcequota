@@ -68,7 +68,7 @@ func (a *persistentVolumeClaimAnnotator) Default(ctx context.Context, obj runtim
 					pvc.Annotations = map[string]string{}
 				}
 				pvc.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated PersistentVolumeClaim")
+				log.Info("PersistentVolumeClaim Labeled")
 				return nil
 			}
 		}
@@ -95,7 +95,7 @@ func (v *persistentVolumeClaimValidator) validate(ctx context.Context, obj runti
 	log.Info("Validating PersistentVolumeClaim")
 	prqName, found := pvc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

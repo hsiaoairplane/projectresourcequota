@@ -68,7 +68,7 @@ func (a *serviceAnnotator) Default(ctx context.Context, obj runtime.Object) erro
 					svc.Annotations = map[string]string{}
 				}
 				svc.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated Service")
+				log.Info("Service Labeled")
 				return nil
 			}
 		}
@@ -127,7 +127,7 @@ func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Objec
 	log.Info("Validating Service")
 	prqName, found := svc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

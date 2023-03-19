@@ -68,7 +68,7 @@ func (a *resourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object
 					rq.Annotations = map[string]string{}
 				}
 				rq.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated ResourceQuota")
+				log.Info("ResourceQuota Labeled")
 				return nil
 			}
 		}
@@ -95,7 +95,7 @@ func (v *resourceQuotaValidator) validate(ctx context.Context, obj runtime.Objec
 	log.Info("Validating ResourceQuota")
 	prqName, found := resourceQuota.Annotations[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

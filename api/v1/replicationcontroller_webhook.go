@@ -68,7 +68,7 @@ func (a *replicationControllerAnnotator) Default(ctx context.Context, obj runtim
 					rc.Annotations = map[string]string{}
 				}
 				rc.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated ReplicationController")
+				log.Info("ReplicationController Labeled")
 				return nil
 			}
 		}
@@ -95,7 +95,7 @@ func (v *replicationControllerValidator) validate(ctx context.Context, obj runti
 	log.Info("Validating ReplicationController")
 	prqName, found := rc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

@@ -68,7 +68,7 @@ func (a *configMapAnnotator) Default(ctx context.Context, obj runtime.Object) er
 					cm.Labels = map[string]string{}
 				}
 				cm.Labels[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated ConfigMap")
+				log.Info("ConfigMap Labeled")
 				return nil
 			}
 		}
@@ -95,7 +95,7 @@ func (v *configMapValidator) validate(ctx context.Context, obj runtime.Object) e
 	log.Info("Validating ConfigMap")
 	prqName, found := cm.Labels[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing labels %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

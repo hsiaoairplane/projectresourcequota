@@ -68,7 +68,7 @@ func (a *secretAnnotator) Default(ctx context.Context, obj runtime.Object) error
 					secret.Annotations = map[string]string{}
 				}
 				secret.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Annotated Secret")
+				log.Info("Secret Labeled")
 				return nil
 			}
 		}
@@ -95,7 +95,7 @@ func (v *secretValidator) validate(ctx context.Context, obj runtime.Object) erro
 	log.Info("Validating Secret")
 	prqName, found := secret.Annotations[ProjectResourceQuotaLabel]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR
