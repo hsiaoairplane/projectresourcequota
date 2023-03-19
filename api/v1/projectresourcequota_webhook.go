@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var resourceNameList = []corev1.ResourceName{
@@ -149,6 +150,8 @@ func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj 
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+	log := logf.FromContext(ctx)
+
 	oldPrq, ok := oldObj.(*ProjectResourceQuota)
 	if !ok {
 		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", oldObj)
@@ -163,8 +166,13 @@ func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldO
 	oldNamespaces := sets.NewString(oldPrq.Spec.Namespaces...)
 	newNamespaces := sets.NewString(newPrq.Spec.Namespaces...)
 	removedNamespaces := oldNamespaces.Difference(newNamespaces)
+
+	log.Info("validate update", "oldNamespaces", oldNamespaces, "newNamespaces", newNamespaces, "removedNamespace", removedNamespaces)
+
 	if len(removedNamespaces) > 0 {
 		for _, removedNamespace := range removedNamespaces.List() {
+			log.Info("validate update", "newPrq.Name", newPrq.Name, "removedNamespace", removedNamespace)
+
 			listOptions := (&client.ListOptions{}).ApplyOptions([]client.ListOption{
 				client.MatchingLabels{ProjectResourceQuotaLabel: newPrq.Name},
 				client.InNamespace(removedNamespace),
