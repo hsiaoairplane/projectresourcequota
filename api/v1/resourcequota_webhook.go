@@ -84,15 +84,14 @@ type resourceQuotaValidator struct {
 	client.Client
 }
 
-// validate admits a resourcequota if a specific annotation exists.
-func (v *resourceQuotaValidator) validate(ctx context.Context, obj runtime.Object) error {
+func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	log := logf.FromContext(ctx)
 	resourceQuota, ok := obj.(*corev1.ResourceQuota)
 	if !ok {
 		return fmt.Errorf("expected a ResourceQuota but got a %T", obj)
 	}
 
-	log.Info("Validating ResourceQuota")
+	log.Info("Validating ResourceQuota Creates")
 	prqName, found := resourceQuota.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
@@ -114,12 +113,8 @@ func (v *resourceQuotaValidator) validate(ctx context.Context, obj runtime.Objec
 	return nil
 }
 
-func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return v.validate(ctx, obj)
-}
-
 func (v *resourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return v.validate(ctx, newObj)
+	return nil
 }
 
 func (v *resourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {

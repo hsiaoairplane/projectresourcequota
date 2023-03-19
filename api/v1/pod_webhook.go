@@ -92,7 +92,7 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) e
 		return fmt.Errorf("expected a Pod but got a %T", obj)
 	}
 
-	log.Info("Validating Pod")
+	log.Info("Validating Pod Creates")
 	prqName, found := pod.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return nil

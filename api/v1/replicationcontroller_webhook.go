@@ -84,15 +84,14 @@ type replicationControllerValidator struct {
 	client.Client
 }
 
-// validate admits a replicationcontroller if a specific annotation exists.
-func (v *replicationControllerValidator) validate(ctx context.Context, obj runtime.Object) error {
+func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	log := logf.FromContext(ctx)
 	rc, ok := obj.(*corev1.ReplicationController)
 	if !ok {
 		return fmt.Errorf("expected a ReplicationController but got a %T", obj)
 	}
 
-	log.Info("Validating ReplicationController")
+	log.Info("Validating ReplicationController Creates")
 	prqName, found := rc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
@@ -114,12 +113,8 @@ func (v *replicationControllerValidator) validate(ctx context.Context, obj runti
 	return nil
 }
 
-func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return v.validate(ctx, obj)
-}
-
 func (v *replicationControllerValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return v.validate(ctx, newObj)
+	return nil
 }
 
 func (v *replicationControllerValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {

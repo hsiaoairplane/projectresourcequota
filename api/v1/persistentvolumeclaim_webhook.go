@@ -84,15 +84,14 @@ type persistentVolumeClaimValidator struct {
 	client.Client
 }
 
-// validate admits a pvc if a specific annotation exists.
-func (v *persistentVolumeClaimValidator) validate(ctx context.Context, obj runtime.Object) error {
+func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	log := logf.FromContext(ctx)
 	pvc, ok := obj.(*corev1.PersistentVolumeClaim)
 	if !ok {
 		return fmt.Errorf("expected a PersistentVolumeClaim but got a %T", obj)
 	}
 
-	log.Info("Validating PersistentVolumeClaim")
+	log.Info("Validating PersistentVolumeClaim Creates")
 	prqName, found := pvc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
@@ -114,12 +113,8 @@ func (v *persistentVolumeClaimValidator) validate(ctx context.Context, obj runti
 	return nil
 }
 
-func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return v.validate(ctx, obj)
-}
-
 func (v *persistentVolumeClaimValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return v.validate(ctx, newObj)
+	return nil
 }
 
 func (v *persistentVolumeClaimValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {

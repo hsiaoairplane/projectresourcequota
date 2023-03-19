@@ -84,15 +84,14 @@ type secretValidator struct {
 	client.Client
 }
 
-// validate admits a secret if a specific annotation exists.
-func (v *secretValidator) validate(ctx context.Context, obj runtime.Object) error {
+func (v *secretValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	log := logf.FromContext(ctx)
 	secret, ok := obj.(*corev1.Secret)
 	if !ok {
 		return fmt.Errorf("expected a Secret but got a %T", obj)
 	}
 
-	log.Info("Validating Secret")
+	log.Info("Validating Secret Creates")
 	prqName, found := secret.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
@@ -114,12 +113,8 @@ func (v *secretValidator) validate(ctx context.Context, obj runtime.Object) erro
 	return nil
 }
 
-func (v *secretValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return v.validate(ctx, obj)
-}
-
 func (v *secretValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return v.validate(ctx, newObj)
+	return nil
 }
 
 func (v *secretValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {

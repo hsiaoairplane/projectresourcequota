@@ -84,15 +84,14 @@ type configMapValidator struct {
 	client.Client
 }
 
-// validate admits a configmap if a specific label exists.
-func (v *configMapValidator) validate(ctx context.Context, obj runtime.Object) error {
+func (v *configMapValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	log := logf.FromContext(ctx)
 	cm, ok := obj.(*corev1.ConfigMap)
 	if !ok {
 		return fmt.Errorf("expected a ConfigMap but got a %T", obj)
 	}
 
-	log.Info("Validating ConfigMap")
+	log.Info("Validating ConfigMap Creates")
 	prqName, found := cm.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
@@ -114,12 +113,8 @@ func (v *configMapValidator) validate(ctx context.Context, obj runtime.Object) e
 	return nil
 }
 
-func (v *configMapValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
-	return v.validate(ctx, obj)
-}
-
 func (v *configMapValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return v.validate(ctx, newObj)
+	return nil
 }
 
 func (v *configMapValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {

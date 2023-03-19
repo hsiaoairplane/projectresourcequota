@@ -124,7 +124,7 @@ func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Objec
 		return fmt.Errorf("expected a Service but got a %T", obj)
 	}
 
-	log.Info("Validating Service")
+	log.Info("Validating Service Creates")
 	prqName, found := svc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
@@ -162,7 +162,7 @@ func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj ru
 		return fmt.Errorf("expected a Service but got a %T", newObj)
 	}
 
-	log.Info("Validating Service")
+	log.Info("Validating Service Updates")
 	prqName, found := newSvc.Annotations[ProjectResourceQuotaLabel]
 	if !found {
 		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
