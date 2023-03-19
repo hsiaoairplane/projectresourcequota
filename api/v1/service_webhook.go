@@ -67,7 +67,6 @@ func (a *serviceAnnotator) Default(ctx context.Context, obj runtime.Object) erro
 				if svc.Annotations == nil {
 					svc.Annotations = map[string]string{}
 				}
-				svc.Annotations[ProjectNamespaceLabel] = ns
 				svc.Annotations[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated Service")
 				return nil

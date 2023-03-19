@@ -17,6 +17,5 @@ limitations under the License.
 package v1
 
 const (
-	ProjectNamespaceLabel     = "project-namespace"
 	ProjectResourceQuotaLabel = "project-resource-quota"
 )

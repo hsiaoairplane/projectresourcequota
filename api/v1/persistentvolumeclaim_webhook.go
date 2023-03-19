@@ -67,7 +67,6 @@ func (a *persistentVolumeClaimAnnotator) Default(ctx context.Context, obj runtim
 				if pvc.Annotations == nil {
 					pvc.Annotations = map[string]string{}
 				}
-				pvc.Annotations[ProjectNamespaceLabel] = ns
 				pvc.Annotations[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated PersistentVolumeClaim")
 				return nil

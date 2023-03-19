@@ -67,7 +67,6 @@ func (a *resourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object
 				if rq.Annotations == nil {
 					rq.Annotations = map[string]string{}
 				}
-				rq.Annotations[ProjectNamespaceLabel] = ns
 				rq.Annotations[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated ResourceQuota")
 				return nil

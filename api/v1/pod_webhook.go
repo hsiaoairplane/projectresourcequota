@@ -68,7 +68,6 @@ func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
 				if pod.Annotations == nil {
 					pod.Annotations = map[string]string{}
 				}
-				pod.Annotations[ProjectNamespaceLabel] = ns
 				pod.Annotations[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated Pod")
 				return nil

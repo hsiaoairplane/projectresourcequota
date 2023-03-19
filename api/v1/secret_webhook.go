@@ -67,7 +67,6 @@ func (a *secretAnnotator) Default(ctx context.Context, obj runtime.Object) error
 				if secret.Annotations == nil {
 					secret.Annotations = map[string]string{}
 				}
-				secret.Annotations[ProjectNamespaceLabel] = ns
 				secret.Annotations[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated Secret")
 				return nil

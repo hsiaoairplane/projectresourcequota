@@ -67,7 +67,6 @@ func (a *replicationControllerAnnotator) Default(ctx context.Context, obj runtim
 				if rc.Annotations == nil {
 					rc.Annotations = map[string]string{}
 				}
-				rc.Annotations[ProjectNamespaceLabel] = ns
 				rc.Annotations[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated ReplicationController")
 				return nil

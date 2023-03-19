@@ -67,7 +67,6 @@ func (a *configMapAnnotator) Default(ctx context.Context, obj runtime.Object) er
 				if cm.Labels == nil {
 					cm.Labels = map[string]string{}
 				}
-				cm.Labels[ProjectNamespaceLabel] = ns
 				cm.Labels[ProjectResourceQuotaLabel] = prq.Name
 				log.Info("Annotated ConfigMap")
 				return nil
