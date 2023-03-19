@@ -39,9 +39,8 @@ type ProjectResourceQuotaStatus struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster,shortName=prq
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:scope=Cluster
-//+kubebuilder:resource:shortName=prq
 //+kubebuilder:printcolumn:name="Namespaces",type="string",JSONPath=".spec.namespaces",description="Namespaces"
 //+kubebuilder:printcolumn:name="Hard",type="string",JSONPath=".spec.hard",description="Hard"
 //+kubebuilder:printcolumn:name="Used",type="string",JSONPath=".status.used",description="Used"

@@ -15,7 +15,7 @@ spec:
     shortNames:
     - prq
     singular: projectresourcequota
-  scope: Namespaced
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - description: Namespaces
