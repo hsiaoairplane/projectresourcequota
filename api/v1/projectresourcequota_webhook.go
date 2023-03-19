@@ -22,6 +22,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -188,6 +189,12 @@ func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldO
 				if err := v.Client.Update(ctx, &cm); err != nil {
 					return err
 				}
+
+				newCM := &corev1.ConfigMap{}
+				if err := v.Client.Get(ctx, types.NamespacedName{Namespace: cm.Namespace, Name: cm.Name}, newCM); err != nil {
+					return err
+				}
+				log.Info("validate update", "newCM.Labels", newCM.Labels)
 			}
 
 			// remove the labels from the persistentvolumeclaims.

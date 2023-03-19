@@ -57,6 +57,8 @@ func (a *configMapAnnotator) Default(ctx context.Context, obj runtime.Object) er
 	}
 
 	for _, prq := range prqList.Items {
+		log.Info("ConfigMap Default", "spec.namespaces", prq.Spec.Namespaces)
+
 		for _, ns := range prq.Spec.Namespaces {
 			if ns == cm.Namespace {
 				_, ok := prq.Spec.Hard[corev1.ResourceConfigMaps]
