@@ -73,10 +73,10 @@ func (a *persistentVolumeClaimAnnotator) Default(ctx context.Context, obj runtim
 				return nil
 			}
 
-			if pvc.Annotations == nil {
-				pvc.Annotations = map[string]string{}
+			if pvc.Labels == nil {
+				pvc.Labels = map[string]string{}
 			}
-			pvc.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			pvc.Labels[ProjectResourceQuotaLabel] = prq.Name
 			log.Info("PersistentVolumeClaim Labeled")
 			return nil
 		}
@@ -100,7 +100,7 @@ func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj
 	}
 
 	log.Info("Validating PersistentVolumeClaim Creates")
-	prqName, found := pvc.Annotations[ProjectResourceQuotaLabel]
+	prqName, found := pvc.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
 	}

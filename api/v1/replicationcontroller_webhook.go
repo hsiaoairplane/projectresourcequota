@@ -73,10 +73,10 @@ func (a *replicationControllerAnnotator) Default(ctx context.Context, obj runtim
 				return nil
 			}
 
-			if rc.Annotations == nil {
-				rc.Annotations = map[string]string{}
+			if rc.Labels == nil {
+				rc.Labels = map[string]string{}
 			}
-			rc.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			rc.Labels[ProjectResourceQuotaLabel] = prq.Name
 			log.Info("ReplicationController Labeled")
 			return nil
 		}
@@ -100,7 +100,7 @@ func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, obj
 	}
 
 	log.Info("Validating ReplicationController Creates")
-	prqName, found := rc.Annotations[ProjectResourceQuotaLabel]
+	prqName, found := rc.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
 	}

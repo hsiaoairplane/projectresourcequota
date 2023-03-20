@@ -73,10 +73,10 @@ func (a *serviceAnnotator) Default(ctx context.Context, obj runtime.Object) erro
 				return nil
 			}
 
-			if svc.Annotations == nil {
-				svc.Annotations = map[string]string{}
+			if svc.Labels == nil {
+				svc.Labels = map[string]string{}
 			}
-			svc.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			svc.Labels[ProjectResourceQuotaLabel] = prq.Name
 			log.Info("Service Labeled")
 			return nil
 		}
@@ -133,7 +133,7 @@ func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Objec
 	}
 
 	log.Info("Validating Service Creates")
-	prqName, found := svc.Annotations[ProjectResourceQuotaLabel]
+	prqName, found := svc.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
 	}
@@ -171,7 +171,7 @@ func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj ru
 	}
 
 	log.Info("Validating Service Updates")
-	prqName, found := newSvc.Annotations[ProjectResourceQuotaLabel]
+	prqName, found := newSvc.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
 	}

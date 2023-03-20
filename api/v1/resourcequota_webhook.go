@@ -73,10 +73,10 @@ func (a *resourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object
 				return nil
 			}
 
-			if rq.Annotations == nil {
-				rq.Annotations = map[string]string{}
+			if rq.Labels == nil {
+				rq.Labels = map[string]string{}
 			}
-			rq.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			rq.Labels[ProjectResourceQuotaLabel] = prq.Name
 			log.Info("ResourceQuota Labeled")
 			return nil
 		}
@@ -100,7 +100,7 @@ func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime
 	}
 
 	log.Info("Validating ResourceQuota Creates")
-	prqName, found := resourceQuota.Annotations[ProjectResourceQuotaLabel]
+	prqName, found := resourceQuota.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
 	}

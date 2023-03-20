@@ -74,10 +74,10 @@ func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
 				return nil
 			}
 
-			if pod.Annotations == nil {
-				pod.Annotations = map[string]string{}
+			if pod.Labels == nil {
+				pod.Labels = map[string]string{}
 			}
-			pod.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			pod.Labels[ProjectResourceQuotaLabel] = prq.Name
 			log.Info("Pod Labeled")
 			return nil
 		}
@@ -101,7 +101,7 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) e
 	}
 
 	log.Info("Validating Pod Creates")
-	prqName, found := pod.Annotations[ProjectResourceQuotaLabel]
+	prqName, found := pod.Labels[ProjectResourceQuotaLabel]
 	if !found {
 		return nil
 	}
