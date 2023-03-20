@@ -18,12 +18,15 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -63,43 +66,168 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 
 	log.Info("Reconcile ProjectResourceQuota", "name", req.Name, "namespace", req.Namespace)
 
-	rs := &jentingiov1.ProjectResourceQuota{}
-	if err := r.Get(ctx, req.NamespacedName, rs); err != nil {
+	prq := &jentingiov1.ProjectResourceQuota{}
+	if err := r.Get(ctx, req.NamespacedName, prq); err != nil {
 		return ctrl.Result{}, err
 	}
-	if rs.Status.Used == nil {
-		rs.Status.Used = make(corev1.ResourceList)
+	if prq.Status.Used == nil {
+		prq.Status.Used = make(corev1.ResourceList)
+	}
+
+	anno, ok := prq.Annotations[v1.LastAppliedConfigAnnotation]
+	if ok {
+		oldPrq := &jentingiov1.ProjectResourceQuota{}
+		if err := json.Unmarshal([]byte(anno), oldPrq); err != nil {
+			log.Error(err, "failed to unmarshal last applied config annotation")
+			return ctrl.Result{}, nil
+		}
+
+		// handle the namespapce removal from the spec.namespaces
+		oldNamespaces := sets.NewString(oldPrq.Spec.Namespaces...)
+		newNamespaces := sets.NewString(prq.Spec.Namespaces...)
+		removedNamespaces := oldNamespaces.Difference(newNamespaces)
+
+		log.Info("Reconcile ProjectResourceQuota", "oldNamespaces", oldNamespaces, "newNamespaces", newNamespaces, "removedNamespace", removedNamespaces)
+
+		if len(removedNamespaces) > 0 {
+			for _, removedNamespace := range removedNamespaces.List() {
+				log.Info("Reconcile ProjectResourceQuota", "newPrq.Name", prq.Name, "removedNamespace", removedNamespace)
+
+				listOptions := (&client.ListOptions{}).ApplyOptions([]client.ListOption{
+					client.MatchingLabels{jentingiov1.ProjectResourceQuotaLabel: prq.Name},
+					client.InNamespace(removedNamespace),
+				})
+
+				// remove the labels from the configmaps.
+				cmList := &corev1.ConfigMapList{}
+				if err := r.Client.List(ctx, cmList, listOptions); err != nil {
+					log.Error(err, "failed to list configmaps")
+					return ctrl.Result{}, err
+				}
+				for _, cm := range cmList.Items {
+					delete(cm.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &cm); err != nil {
+						log.Error(err, "failed to update configmap %s/%s", cm.Name, cm.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+
+				// remove the labels from the persistentvolumeclaims.
+				pvcList := &corev1.PersistentVolumeClaimList{}
+				if err := r.Client.List(ctx, pvcList, listOptions); err != nil {
+					log.Error(err, "failed to list persistentvolumeclaims")
+					return ctrl.Result{}, err
+				}
+				for _, pvc := range pvcList.Items {
+					delete(pvc.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &pvc); err != nil {
+						log.Error(err, "failed to update persistentvolumeclaim %s/%s", pvc.Name, pvc.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+
+				// remove the labels from the pods
+				podList := &corev1.PodList{}
+				if err := r.Client.List(ctx, podList, listOptions); err != nil {
+					log.Error(err, "failed to list pods")
+					return ctrl.Result{}, err
+				}
+				for _, pod := range podList.Items {
+					delete(pod.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &pod); err != nil {
+						log.Error(err, "failed to update pod %s/%s", pod.Name, pod.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+
+				// remove the labels from the replicationcontrollers
+				rcList := &corev1.ReplicationControllerList{}
+				if err := r.Client.List(ctx, rcList, listOptions); err != nil {
+					log.Error(err, "failed to list replicationcontrollers")
+					return ctrl.Result{}, err
+				}
+				for _, rc := range rcList.Items {
+					delete(rc.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &rc); err != nil {
+						log.Error(err, "failed to update replicationcontroller %s/%s", rc.Name, rc.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+
+				// remove the labels from the resourcequotas
+				rqList := &corev1.ResourceQuotaList{}
+				if err := r.Client.List(ctx, rqList, listOptions); err != nil {
+					log.Error(err, "failed to list resourcequotas")
+					return ctrl.Result{}, err
+				}
+				for _, rq := range rqList.Items {
+					delete(rq.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &rq); err != nil {
+						log.Error(err, "failed to update resourcequota %s/%s", rq.Name, rq.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+
+				// remove the labels from the secrets
+				secretList := &corev1.SecretList{}
+				if err := r.Client.List(ctx, secretList, listOptions); err != nil {
+					log.Error(err, "failed to list secrets")
+					return ctrl.Result{}, err
+				}
+				for _, secret := range secretList.Items {
+					delete(secret.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &secret); err != nil {
+						log.Error(err, "failed to update secret %s/%s", secret.Name, secret.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+
+				// remove the labels from the services
+				svcList := &corev1.ServiceList{}
+				if err := r.Client.List(ctx, svcList, listOptions); err != nil {
+					log.Error(err, "failed to list services")
+					return ctrl.Result{}, err
+				}
+				for _, svc := range svcList.Items {
+					delete(svc.Labels, jentingiov1.ProjectResourceQuotaLabel)
+					if err := r.Client.Update(ctx, &svc); err != nil {
+						log.Error(err, "failed to update service %s/%s", svc.Name, svc.Namespace)
+						return ctrl.Result{}, err
+					}
+				}
+			}
+		}
 	}
 
 	listOptions := (&client.ListOptions{}).ApplyOptions([]client.ListOption{
-		client.MatchingLabels{jentingiov1.ProjectResourceQuotaLabel: rs.Name},
+		client.MatchingLabels{jentingiov1.ProjectResourceQuotaLabel: prq.Name},
 	})
 
 	// ConfigMap
-	if _, found := rs.Spec.Hard[corev1.ResourceConfigMaps]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourceConfigMaps]; found {
 		cmList := &corev1.ConfigMapList{}
 		if err := r.Client.List(ctx, cmList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourceConfigMaps] = resource.MustParse(fmt.Sprintf("%d", len(cmList.Items)))
+		prq.Status.Used[corev1.ResourceConfigMaps] = resource.MustParse(fmt.Sprintf("%d", len(cmList.Items)))
 	}
 
 	// PersistentVolumeClaim
-	if _, found := rs.Spec.Hard[corev1.ResourcePersistentVolumeClaims]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourcePersistentVolumeClaims]; found {
 		pvcList := &corev1.PersistentVolumeClaimList{}
 		if err := r.Client.List(ctx, pvcList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourcePersistentVolumeClaims] = resource.MustParse(fmt.Sprintf("%d", len(pvcList.Items)))
+		prq.Status.Used[corev1.ResourcePersistentVolumeClaims] = resource.MustParse(fmt.Sprintf("%d", len(pvcList.Items)))
 	}
 
 	// Pod
-	if _, found := rs.Spec.Hard[corev1.ResourcePods]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourcePods]; found {
 		podList := &corev1.PodList{}
 		if err := r.Client.List(ctx, podList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourcePods] = resource.MustParse(fmt.Sprintf("%d", len(podList.Items)))
+		prq.Status.Used[corev1.ResourcePods] = resource.MustParse(fmt.Sprintf("%d", len(podList.Items)))
 
 		var requestCPU, requestMemory, requestStorage, requestEphemeralStorage resource.Quantity
 		var limitCPU, limitMemory, limitEphemeralStorage resource.Quantity
@@ -116,76 +244,76 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			}
 		}
 
-		if _, found := rs.Spec.Hard[corev1.ResourceCPU]; found {
-			rs.Status.Used[corev1.ResourceCPU] = requestCPU
+		if _, found := prq.Spec.Hard[corev1.ResourceCPU]; found {
+			prq.Status.Used[corev1.ResourceCPU] = requestCPU
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceRequestsCPU]; found {
-			rs.Status.Used[corev1.ResourceRequestsCPU] = requestCPU
+		if _, found := prq.Spec.Hard[corev1.ResourceRequestsCPU]; found {
+			prq.Status.Used[corev1.ResourceRequestsCPU] = requestCPU
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceMemory]; found {
-			rs.Status.Used[corev1.ResourceMemory] = requestMemory
+		if _, found := prq.Spec.Hard[corev1.ResourceMemory]; found {
+			prq.Status.Used[corev1.ResourceMemory] = requestMemory
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceRequestsMemory]; found {
-			rs.Status.Used[corev1.ResourceRequestsMemory] = requestMemory
+		if _, found := prq.Spec.Hard[corev1.ResourceRequestsMemory]; found {
+			prq.Status.Used[corev1.ResourceRequestsMemory] = requestMemory
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceStorage]; found {
-			rs.Status.Used[corev1.ResourceStorage] = requestStorage
+		if _, found := prq.Spec.Hard[corev1.ResourceStorage]; found {
+			prq.Status.Used[corev1.ResourceStorage] = requestStorage
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceRequestsStorage]; found {
-			rs.Status.Used[corev1.ResourceRequestsStorage] = requestStorage
+		if _, found := prq.Spec.Hard[corev1.ResourceRequestsStorage]; found {
+			prq.Status.Used[corev1.ResourceRequestsStorage] = requestStorage
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceEphemeralStorage]; found {
-			rs.Status.Used[corev1.ResourceEphemeralStorage] = requestEphemeralStorage
+		if _, found := prq.Spec.Hard[corev1.ResourceEphemeralStorage]; found {
+			prq.Status.Used[corev1.ResourceEphemeralStorage] = requestEphemeralStorage
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceRequestsEphemeralStorage]; found {
-			rs.Status.Used[corev1.ResourceRequestsEphemeralStorage] = requestEphemeralStorage
+		if _, found := prq.Spec.Hard[corev1.ResourceRequestsEphemeralStorage]; found {
+			prq.Status.Used[corev1.ResourceRequestsEphemeralStorage] = requestEphemeralStorage
 		}
 
-		if _, found := rs.Spec.Hard[corev1.ResourceLimitsCPU]; found {
-			rs.Status.Used[corev1.ResourceLimitsCPU] = limitCPU
+		if _, found := prq.Spec.Hard[corev1.ResourceLimitsCPU]; found {
+			prq.Status.Used[corev1.ResourceLimitsCPU] = limitCPU
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceLimitsMemory]; found {
-			rs.Status.Used[corev1.ResourceLimitsMemory] = limitMemory
+		if _, found := prq.Spec.Hard[corev1.ResourceLimitsMemory]; found {
+			prq.Status.Used[corev1.ResourceLimitsMemory] = limitMemory
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]; found {
-			rs.Status.Used[corev1.ResourceLimitsEphemeralStorage] = limitEphemeralStorage
+		if _, found := prq.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]; found {
+			prq.Status.Used[corev1.ResourceLimitsEphemeralStorage] = limitEphemeralStorage
 		}
 	}
 
 	// ReplicationController
-	if _, found := rs.Spec.Hard[corev1.ResourceReplicationControllers]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourceReplicationControllers]; found {
 		rcList := &corev1.ReplicationControllerList{}
 		if err := r.Client.List(ctx, rcList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourceReplicationControllers] = resource.MustParse(fmt.Sprintf("%d", len(rcList.Items)))
+		prq.Status.Used[corev1.ResourceReplicationControllers] = resource.MustParse(fmt.Sprintf("%d", len(rcList.Items)))
 	}
 
 	// ResourceQuota
-	if _, found := rs.Spec.Hard[corev1.ResourceQuotas]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourceQuotas]; found {
 		rqList := &corev1.ResourceQuotaList{}
 		if err := r.Client.List(ctx, rqList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourceQuotas] = resource.MustParse(fmt.Sprintf("%d", len(rqList.Items)))
+		prq.Status.Used[corev1.ResourceQuotas] = resource.MustParse(fmt.Sprintf("%d", len(rqList.Items)))
 	}
 
 	// Secret
-	if _, found := rs.Spec.Hard[corev1.ResourceSecrets]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourceSecrets]; found {
 		secretList := &corev1.SecretList{}
 		if err := r.Client.List(ctx, secretList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourceSecrets] = resource.MustParse(fmt.Sprintf("%d", len(secretList.Items)))
+		prq.Status.Used[corev1.ResourceSecrets] = resource.MustParse(fmt.Sprintf("%d", len(secretList.Items)))
 	}
 
 	// Service
-	if _, found := rs.Spec.Hard[corev1.ResourceServices]; found {
+	if _, found := prq.Spec.Hard[corev1.ResourceServices]; found {
 		svcList := &corev1.ServiceList{}
 		if err := r.Client.List(ctx, svcList, listOptions); err != nil {
 			return ctrl.Result{}, err
 		}
-		rs.Status.Used[corev1.ResourceServices] = resource.MustParse(fmt.Sprintf("%d", len(svcList.Items)))
+		prq.Status.Used[corev1.ResourceServices] = resource.MustParse(fmt.Sprintf("%d", len(svcList.Items)))
 
 		var npCount, lbCount int
 		for _, svc := range svcList.Items {
@@ -197,15 +325,15 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			}
 		}
 
-		if _, found := rs.Spec.Hard[corev1.ResourceServicesNodePorts]; found {
-			rs.Status.Used[corev1.ResourceServicesNodePorts] = resource.MustParse(fmt.Sprintf("%d", npCount))
+		if _, found := prq.Spec.Hard[corev1.ResourceServicesNodePorts]; found {
+			prq.Status.Used[corev1.ResourceServicesNodePorts] = resource.MustParse(fmt.Sprintf("%d", npCount))
 		}
-		if _, found := rs.Spec.Hard[corev1.ResourceServicesLoadBalancers]; found {
-			rs.Status.Used[corev1.ResourceServicesLoadBalancers] = resource.MustParse(fmt.Sprintf("%d", lbCount))
+		if _, found := prq.Spec.Hard[corev1.ResourceServicesLoadBalancers]; found {
+			prq.Status.Used[corev1.ResourceServicesLoadBalancers] = resource.MustParse(fmt.Sprintf("%d", lbCount))
 		}
 	}
 
-	if err := r.Status().Update(ctx, rs); err != nil {
+	if err := r.Status().Update(ctx, prq); err != nil {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
