@@ -191,7 +191,8 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) e
 }
 
 func (v *podValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	// TODO
+	// we don't need to validate resources.requests.* and resources.limits.* update
+	// because Kubernetes does not allow to update them
 	return nil
 }
 
