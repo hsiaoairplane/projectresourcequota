@@ -414,10 +414,6 @@ func (r *ProjectResourceQuotaReconciler) SetupWithManager(mgr ctrl.Manager) erro
 }
 
 func (r *ProjectResourceQuotaReconciler) findObjects(obj client.Object) []reconcile.Request {
-	log := log.FromContext(context.TODO())
-
-	log.Info("Find objects", "name", obj.GetName(), "namespace", obj.GetNamespace())
-
 	prqName, found := obj.GetLabels()[jentingiov1.ProjectResourceQuotaLabel]
 	if !found {
 		return nil
