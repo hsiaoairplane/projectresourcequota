@@ -7,19 +7,11 @@ metadata:
     app.kubernetes.io/part-of: projectresourcequota
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: projectresourcequota
-  name: projectresourcequota-sample
+  name: projectresourcequota-test
 spec:
-  hard:
-    configmaps: "1"
-    cpu: "1"
-    limits.cpu: 500m
-    limits.memory: 128Mi
-    memory: 512Mi
-    persistentvolumeclaims: "1"
-    pods: "10"
-    requests.cpu: 250m
-    requests.memory: 64Mi
   namespaces:
-  - foo
-  - bar
+  - a
+  - b
   - default
+  hard:
+    configmaps: 10

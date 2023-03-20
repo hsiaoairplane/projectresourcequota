@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm
+  namespace: bar
+data:
+  allowed: '"true"'
+  enemies: aliens
+  lives: "3"
