@@ -110,9 +110,10 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) e
 	}
 
 	// check the status.used.pods is less than spec.hard.pods
+	used := prq.Status.Used[corev1.ResourcePods]
 	hard := prq.Spec.Hard[corev1.ResourcePods]
-	if hard.Cmp(prq.Status.Used[corev1.ResourcePods]) != 1 {
-		return fmt.Errorf("over project resource quota. current %s counts %v, hard limit count %v", corev1.ResourcePods, hard, prq.Status.Used[corev1.ResourcePods])
+	if hard.Cmp(used) != 1 {
+		return fmt.Errorf("over project resource quota. current %s counts %v, hard limit count %v", corev1.ResourcePods, hard.String(), used.String())
 	}
 
 	// calculate resource requests and limits
@@ -121,71 +122,120 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) e
 	var limitCPU, limitMemory, limitEphemeralStorage resource.Quantity
 	for _, container := range pod.Spec.Containers {
 		// without requests prefix
-		cpu.Add(container.Resources.Requests[corev1.ResourceCPU])
-		memory.Add(container.Resources.Requests[corev1.ResourceMemory])
-		storage.Add(container.Resources.Requests[corev1.ResourceStorage])
-		ephemeralStorage.Add(container.Resources.Requests[corev1.ResourceEphemeralStorage])
-
-		// with requests prefix
-		requestCPU.Add(container.Resources.Requests[corev1.ResourceRequestsCPU])
-		requestMemory.Add(container.Resources.Requests[corev1.ResourceRequestsMemory])
-		requestStorage.Add(container.Resources.Requests[corev1.ResourceRequestsStorage])
-		requestEphemeralStorage.Add(container.Resources.Requests[corev1.ResourceRequestsEphemeralStorage])
+		quality := container.Resources.Requests.Cpu()
+		if quality != nil {
+			cpu.Add(*quality)
+			requestCPU.Add(*quality)
+		}
+		quality = container.Resources.Requests.Memory()
+		if quality != nil {
+			memory.Add(*quality)
+			requestMemory.Add(*quality)
+		}
+		quality = container.Resources.Requests.Storage()
+		if quality != nil {
+			storage.Add(*quality)
+			requestStorage.Add(*quality)
+		}
+		quality = container.Resources.Requests.StorageEphemeral()
+		if quality != nil {
+			ephemeralStorage.Add(*quality)
+			requestEphemeralStorage.Add(*quality)
+		}
 
 		// limits
-		limitCPU.Add(container.Resources.Limits[corev1.ResourceLimitsCPU])
-		limitMemory.Add(container.Resources.Limits[corev1.ResourceLimitsMemory])
-		limitEphemeralStorage.Add(container.Resources.Limits[corev1.ResourceLimitsEphemeralStorage])
+		quality = container.Resources.Limits.Cpu()
+		if quality != nil {
+			limitCPU.Add(*quality)
+		}
+		quality = container.Resources.Limits.Memory()
+		if quality != nil {
+			limitMemory.Add(*quality)
+		}
+		quality = container.Resources.Limits.StorageEphemeral()
+		if quality != nil {
+			limitEphemeralStorage.Add(*quality)
+		}
 	}
 
 	// without requests prefix
-	cpu.Add(prq.Status.Used[corev1.ResourceCPU])
-	if cpu.Cmp(prq.Spec.Hard[corev1.ResourceCPU]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceCPU, cpu, prq.Status.Used[corev1.ResourceCPU], prq.Spec.Hard[corev1.ResourceCPU])
+	used = prq.Status.Used[corev1.ResourceCPU]
+	hard = prq.Spec.Hard[corev1.ResourceCPU]
+	cpu.Add(used)
+	if cpu.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceCPU, cpu.String(), used.String(), hard.String())
 	}
-	memory.Add(prq.Status.Used[corev1.ResourceMemory])
-	if memory.Cmp(prq.Spec.Hard[corev1.ResourceMemory]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceMemory, memory, prq.Status.Used[corev1.ResourceMemory], prq.Spec.Hard[corev1.ResourceMemory])
+
+	used = prq.Status.Used[corev1.ResourceMemory]
+	hard = prq.Spec.Hard[corev1.ResourceMemory]
+	memory.Add(used)
+	if memory.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceMemory, memory.String(), used.String(), hard.String())
 	}
-	storage.Add(prq.Status.Used[corev1.ResourceStorage])
-	if storage.Cmp(prq.Spec.Hard[corev1.ResourceStorage]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceStorage, storage, prq.Status.Used[corev1.ResourceStorage], prq.Spec.Hard[corev1.ResourceStorage])
+
+	used = prq.Status.Used[corev1.ResourceStorage]
+	hard = prq.Spec.Hard[corev1.ResourceStorage]
+	storage.Add(used)
+	if storage.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceStorage, storage.String(), used.String(), hard.String())
 	}
-	ephemeralStorage.Add(prq.Status.Used[corev1.ResourceEphemeralStorage])
-	if ephemeralStorage.Cmp(prq.Spec.Hard[corev1.ResourceEphemeralStorage]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceEphemeralStorage, ephemeralStorage, prq.Status.Used[corev1.ResourceEphemeralStorage], prq.Spec.Hard[corev1.ResourceEphemeralStorage])
+
+	used = prq.Status.Used[corev1.ResourceEphemeralStorage]
+	hard = prq.Spec.Hard[corev1.ResourceEphemeralStorage]
+	ephemeralStorage.Add(used)
+	if ephemeralStorage.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceEphemeralStorage, ephemeralStorage.String(), used.String(), hard.String())
 	}
 
 	// with requests prefix
-	requestCPU.Add(prq.Status.Used[corev1.ResourceRequestsCPU])
-	if requestCPU.Cmp(prq.Spec.Hard[corev1.ResourceRequestsCPU]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsCPU, requestCPU, prq.Status.Used[corev1.ResourceRequestsCPU], prq.Spec.Hard[corev1.ResourceRequestsCPU])
+	used = prq.Status.Used[corev1.ResourceRequestsCPU]
+	hard = prq.Spec.Hard[corev1.ResourceRequestsCPU]
+	requestCPU.Add(used)
+	if requestCPU.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsCPU, requestCPU.String(), used.String(), hard.String())
 	}
-	requestMemory.Add(prq.Status.Used[corev1.ResourceRequestsMemory])
-	if requestMemory.Cmp(prq.Spec.Hard[corev1.ResourceRequestsMemory]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsMemory, requestMemory, prq.Status.Used[corev1.ResourceRequestsMemory], prq.Spec.Hard[corev1.ResourceRequestsMemory])
+
+	used = prq.Status.Used[corev1.ResourceRequestsMemory]
+	hard = prq.Spec.Hard[corev1.ResourceRequestsMemory]
+	requestMemory.Add(used)
+	if requestMemory.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsMemory, requestMemory.String(), used.String(), hard.String())
 	}
-	requestStorage.Add(prq.Status.Used[corev1.ResourceRequestsStorage])
-	if requestStorage.Cmp(prq.Spec.Hard[corev1.ResourceRequestsStorage]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsStorage, requestStorage, prq.Status.Used[corev1.ResourceRequestsStorage], prq.Spec.Hard[corev1.ResourceRequestsStorage])
+
+	used = prq.Status.Used[corev1.ResourceRequestsStorage]
+	hard = prq.Spec.Hard[corev1.ResourceRequestsStorage]
+	requestStorage.Add(used)
+	if requestStorage.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsStorage, requestStorage.String(), used.String(), hard.String())
 	}
-	requestEphemeralStorage.Add(prq.Status.Used[corev1.ResourceEphemeralStorage])
-	if requestEphemeralStorage.Cmp(prq.Spec.Hard[corev1.ResourceEphemeralStorage]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsEphemeralStorage, requestEphemeralStorage, prq.Status.Used[corev1.ResourceEphemeralStorage], prq.Spec.Hard[corev1.ResourceEphemeralStorage])
+
+	used = prq.Status.Used[corev1.ResourceRequestsEphemeralStorage]
+	hard = prq.Spec.Hard[corev1.ResourceRequestsEphemeralStorage]
+	requestEphemeralStorage.Add(used)
+	if requestEphemeralStorage.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsEphemeralStorage, requestEphemeralStorage.String(), used.String(), hard.String())
 	}
 
 	// limits
-	limitCPU.Add(prq.Status.Used[corev1.ResourceLimitsCPU])
-	if limitCPU.Cmp(prq.Spec.Hard[corev1.ResourceLimitsCPU]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsCPU, requestCPU, prq.Status.Used[corev1.ResourceLimitsCPU], prq.Spec.Hard[corev1.ResourceLimitsCPU])
+	used = prq.Status.Used[corev1.ResourceLimitsCPU]
+	hard = prq.Spec.Hard[corev1.ResourceLimitsCPU]
+	limitCPU.Add(used)
+	if limitCPU.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsCPU, requestCPU.String(), used.String(), hard.String())
 	}
-	limitMemory.Add(prq.Status.Used[corev1.ResourceLimitsMemory])
-	if limitMemory.Cmp(prq.Spec.Hard[corev1.ResourceLimitsMemory]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsMemory, requestMemory, prq.Status.Used[corev1.ResourceLimitsMemory], prq.Spec.Hard[corev1.ResourceLimitsMemory])
+
+	used = prq.Status.Used[corev1.ResourceLimitsMemory]
+	hard = prq.Spec.Hard[corev1.ResourceLimitsMemory]
+	limitMemory.Add(used)
+	if limitMemory.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsMemory, requestMemory.String(), used.String(), hard.String())
 	}
-	limitEphemeralStorage.Add(prq.Status.Used[corev1.ResourceLimitsEphemeralStorage])
-	if limitEphemeralStorage.Cmp(prq.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]) == 1 {
-		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsEphemeralStorage, requestEphemeralStorage, prq.Status.Used[corev1.ResourceLimitsEphemeralStorage], prq.Spec.Hard[corev1.ResourceLimitsEphemeralStorage])
+
+	used = prq.Status.Used[corev1.ResourceLimitsEphemeralStorage]
+	hard = prq.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]
+	limitEphemeralStorage.Add(used)
+	if limitEphemeralStorage.Cmp(hard) == 1 {
+		return fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsEphemeralStorage, requestEphemeralStorage.String(), used.String(), hard.String())
 	}
 	return nil
 }
