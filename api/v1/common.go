@@ -17,5 +17,7 @@ limitations under the License.
 package v1
 
 const (
+	ProjectResourceQuotaFinalizer = "jenting.io/finalizer"
+
 	ProjectResourceQuotaLabel = "project-resource-quota"
 )

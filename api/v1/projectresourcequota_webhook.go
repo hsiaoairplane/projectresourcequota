@@ -88,7 +88,18 @@ type projectResourceQuotaAnnotator struct {
 }
 
 func (a *projectResourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object) error {
-	return nil
+	prq, ok := obj.(*ProjectResourceQuota)
+	if !ok {
+		return fmt.Errorf("expected a Pod but got a %T", obj)
+	}
+
+	// the projectresourcequota is under deletion, no need to add finalizer
+	if prq.DeletionTimestamp != nil {
+		return nil
+	}
+
+	// check whether finalizer is added
+	return AddFinalizer(ProjectResourceQuotaFinalizer, obj)
 }
 
 //+kubebuilder:webhook:path=/validate-jenting-io-v1-projectresourcequota,mutating=false,failurePolicy=fail,sideEffects=None,groups=jenting.io,resources=projectresourcequotas,verbs=create;update,versions=v1,name=vprojectresourcequota.kb.io,admissionReviewVersions=v1

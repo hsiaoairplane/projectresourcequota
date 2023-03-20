@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/go-logr/logr"
 	jentingiov1 "github.com/jenting/projectresourcequota/api/v1"
 )
 
@@ -43,6 +44,121 @@ import (
 type ProjectResourceQuotaReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+}
+
+// removeLabelFromObject removes the label project-resource-quota from the configmaps/persistentvolumeclaims/pods/replicationcontrollers/resourcequotas/secrets/services.
+func (r *ProjectResourceQuotaReconciler) removeLabelFromObjects(ctx context.Context, log logr.Logger, prqName string, removedNamespaces sets.String) error {
+	if len(removedNamespaces) == 0 {
+		return nil
+	}
+
+	for _, removedNamespace := range removedNamespaces.List() {
+		log.Info("Reconcile ProjectResourceQuota", "prqName", prqName, "removedNamespace", removedNamespace)
+
+		listOptions := (&client.ListOptions{}).ApplyOptions([]client.ListOption{
+			client.MatchingLabels{jentingiov1.ProjectResourceQuotaLabel: prqName},
+			client.InNamespace(removedNamespace),
+		})
+
+		// remove the labels from the configmaps.
+		cmList := &corev1.ConfigMapList{}
+		if err := r.Client.List(ctx, cmList, listOptions); err != nil {
+			log.Error(err, "failed to list configmaps")
+			return err
+		}
+		for _, cm := range cmList.Items {
+			delete(cm.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &cm); err != nil {
+				log.Error(err, "failed to update configmap %s/%s", cm.Name, cm.Namespace)
+				return err
+			}
+		}
+
+		// remove the labels from the persistentvolumeclaims.
+		pvcList := &corev1.PersistentVolumeClaimList{}
+		if err := r.Client.List(ctx, pvcList, listOptions); err != nil {
+			log.Error(err, "failed to list persistentvolumeclaims")
+			return err
+		}
+		for _, pvc := range pvcList.Items {
+			delete(pvc.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &pvc); err != nil {
+				log.Error(err, "failed to update persistentvolumeclaim %s/%s", pvc.Name, pvc.Namespace)
+				return err
+			}
+		}
+
+		// remove the labels from the pods
+		podList := &corev1.PodList{}
+		if err := r.Client.List(ctx, podList, listOptions); err != nil {
+			log.Error(err, "failed to list pods")
+			return err
+		}
+		for _, pod := range podList.Items {
+			delete(pod.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &pod); err != nil {
+				log.Error(err, "failed to update pod %s/%s", pod.Name, pod.Namespace)
+				return err
+			}
+		}
+
+		// remove the labels from the replicationcontrollers
+		rcList := &corev1.ReplicationControllerList{}
+		if err := r.Client.List(ctx, rcList, listOptions); err != nil {
+			log.Error(err, "failed to list replicationcontrollers")
+			return err
+		}
+		for _, rc := range rcList.Items {
+			delete(rc.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &rc); err != nil {
+				log.Error(err, "failed to update replicationcontroller %s/%s", rc.Name, rc.Namespace)
+				return err
+			}
+		}
+
+		// remove the labels from the resourcequotas
+		rqList := &corev1.ResourceQuotaList{}
+		if err := r.Client.List(ctx, rqList, listOptions); err != nil {
+			log.Error(err, "failed to list resourcequotas")
+			return err
+		}
+		for _, rq := range rqList.Items {
+			delete(rq.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &rq); err != nil {
+				log.Error(err, "failed to update resourcequota %s/%s", rq.Name, rq.Namespace)
+				return err
+			}
+		}
+
+		// remove the labels from the secrets
+		secretList := &corev1.SecretList{}
+		if err := r.Client.List(ctx, secretList, listOptions); err != nil {
+			log.Error(err, "failed to list secrets")
+			return err
+		}
+		for _, secret := range secretList.Items {
+			delete(secret.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &secret); err != nil {
+				log.Error(err, "failed to update secret %s/%s", secret.Name, secret.Namespace)
+				return err
+			}
+		}
+
+		// remove the labels from the services
+		svcList := &corev1.ServiceList{}
+		if err := r.Client.List(ctx, svcList, listOptions); err != nil {
+			log.Error(err, "failed to list services")
+			return err
+		}
+		for _, svc := range svcList.Items {
+			delete(svc.Labels, jentingiov1.ProjectResourceQuotaLabel)
+			if err := r.Client.Update(ctx, &svc); err != nil {
+				log.Error(err, "failed to update service %s/%s", svc.Name, svc.Namespace)
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 //+kubebuilder:rbac:groups=jenting.io,resources=projectresourcequotas,verbs=get;list;watch;create;update;patch;delete
@@ -75,6 +191,29 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 		log.Error(err, "unable to get projectresourcequota")
 		return ctrl.Result{}, err
 	}
+
+	if prq.DeletionTimestamp != nil {
+		removedNamespaces := sets.NewString(prq.Spec.Namespaces...)
+		log.Info("Delete ProjectResourceQuota", "removedNamespace", removedNamespaces)
+
+		if err := r.removeLabelFromObjects(ctx, log, prq.Name, removedNamespaces); err != nil {
+			log.Error(err, "failed to remove label from objects")
+			return ctrl.Result{}, err
+		}
+
+		log.Info("Delete ProjectResourceQuota", "remove finalizer", jentingiov1.ProjectResourceQuotaFinalizer)
+		if err := jentingiov1.RemoveFinalizer(jentingiov1.ProjectResourceQuotaFinalizer, prq); err != nil {
+			log.Error(err, "failed to remove finalizer")
+			return ctrl.Result{}, err
+		}
+
+		log.Info("Delete ProjectResourceQuota", "update projectresourcequota resource", prq.Name)
+		if err := r.Update(ctx, prq); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
+	}
+
 	if prq.Status.Used == nil {
 		prq.Status.Used = make(corev1.ResourceList)
 	}
@@ -94,113 +233,8 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 
 		log.Info("Reconcile ProjectResourceQuota", "oldNamespaces", oldNamespaces, "newNamespaces", newNamespaces, "removedNamespace", removedNamespaces)
 
-		if len(removedNamespaces) > 0 {
-			for _, removedNamespace := range removedNamespaces.List() {
-				log.Info("Reconcile ProjectResourceQuota", "newPrq.Name", prq.Name, "removedNamespace", removedNamespace)
-
-				listOptions := (&client.ListOptions{}).ApplyOptions([]client.ListOption{
-					client.MatchingLabels{jentingiov1.ProjectResourceQuotaLabel: prq.Name},
-					client.InNamespace(removedNamespace),
-				})
-
-				// remove the labels from the configmaps.
-				cmList := &corev1.ConfigMapList{}
-				if err := r.Client.List(ctx, cmList, listOptions); err != nil {
-					log.Error(err, "failed to list configmaps")
-					return ctrl.Result{}, err
-				}
-				for _, cm := range cmList.Items {
-					delete(cm.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &cm); err != nil {
-						log.Error(err, "failed to update configmap %s/%s", cm.Name, cm.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-
-				// remove the labels from the persistentvolumeclaims.
-				pvcList := &corev1.PersistentVolumeClaimList{}
-				if err := r.Client.List(ctx, pvcList, listOptions); err != nil {
-					log.Error(err, "failed to list persistentvolumeclaims")
-					return ctrl.Result{}, err
-				}
-				for _, pvc := range pvcList.Items {
-					delete(pvc.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &pvc); err != nil {
-						log.Error(err, "failed to update persistentvolumeclaim %s/%s", pvc.Name, pvc.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-
-				// remove the labels from the pods
-				podList := &corev1.PodList{}
-				if err := r.Client.List(ctx, podList, listOptions); err != nil {
-					log.Error(err, "failed to list pods")
-					return ctrl.Result{}, err
-				}
-				for _, pod := range podList.Items {
-					delete(pod.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &pod); err != nil {
-						log.Error(err, "failed to update pod %s/%s", pod.Name, pod.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-
-				// remove the labels from the replicationcontrollers
-				rcList := &corev1.ReplicationControllerList{}
-				if err := r.Client.List(ctx, rcList, listOptions); err != nil {
-					log.Error(err, "failed to list replicationcontrollers")
-					return ctrl.Result{}, err
-				}
-				for _, rc := range rcList.Items {
-					delete(rc.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &rc); err != nil {
-						log.Error(err, "failed to update replicationcontroller %s/%s", rc.Name, rc.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-
-				// remove the labels from the resourcequotas
-				rqList := &corev1.ResourceQuotaList{}
-				if err := r.Client.List(ctx, rqList, listOptions); err != nil {
-					log.Error(err, "failed to list resourcequotas")
-					return ctrl.Result{}, err
-				}
-				for _, rq := range rqList.Items {
-					delete(rq.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &rq); err != nil {
-						log.Error(err, "failed to update resourcequota %s/%s", rq.Name, rq.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-
-				// remove the labels from the secrets
-				secretList := &corev1.SecretList{}
-				if err := r.Client.List(ctx, secretList, listOptions); err != nil {
-					log.Error(err, "failed to list secrets")
-					return ctrl.Result{}, err
-				}
-				for _, secret := range secretList.Items {
-					delete(secret.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &secret); err != nil {
-						log.Error(err, "failed to update secret %s/%s", secret.Name, secret.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-
-				// remove the labels from the services
-				svcList := &corev1.ServiceList{}
-				if err := r.Client.List(ctx, svcList, listOptions); err != nil {
-					log.Error(err, "failed to list services")
-					return ctrl.Result{}, err
-				}
-				for _, svc := range svcList.Items {
-					delete(svc.Labels, jentingiov1.ProjectResourceQuotaLabel)
-					if err := r.Client.Update(ctx, &svc); err != nil {
-						log.Error(err, "failed to update service %s/%s", svc.Name, svc.Namespace)
-						return ctrl.Result{}, err
-					}
-				}
-			}
+		if err := r.removeLabelFromObjects(ctx, log, prq.Name, removedNamespaces); err != nil {
+			return ctrl.Result{}, err
 		}
 	}
 
