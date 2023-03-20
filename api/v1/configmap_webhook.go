@@ -73,11 +73,8 @@ func (a *configMapAnnotator) Default(ctx context.Context, obj runtime.Object) er
 				return nil
 			}
 
-			if cm.Labels == nil {
-				cm.Labels = map[string]string{}
-			}
-			cm.Labels[ProjectResourceQuotaLabel] = prq.Name
-			log.Info("ConfigMap Labeled")
+			AddAnnotation(cm, ProjectResourceQuotaAnnotation, prq.Name)
+			log.Info("ConfigMap annotated")
 			return nil
 		}
 	}
@@ -99,8 +96,8 @@ func (v *configMapValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 		return fmt.Errorf("expected a ConfigMap but got a %T", obj)
 	}
 
-	log.Info("Validating ConfigMap Creates")
-	prqName, found := cm.Labels[ProjectResourceQuotaLabel]
+	log.Info("Validating ConfigMap creation")
+	prqName, found := cm.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
 		return nil
 	}

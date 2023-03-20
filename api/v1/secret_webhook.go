@@ -73,11 +73,8 @@ func (a *secretAnnotator) Default(ctx context.Context, obj runtime.Object) error
 				return nil
 			}
 
-			if secret.Labels == nil {
-				secret.Labels = map[string]string{}
-			}
-			secret.Labels[ProjectResourceQuotaLabel] = prq.Name
-			log.Info("Secret Labeled")
+			AddAnnotation(secret, ProjectResourceQuotaAnnotation, prq.Name)
+			log.Info("Secret annotated")
 			return nil
 		}
 	}
@@ -99,8 +96,8 @@ func (v *secretValidator) ValidateCreate(ctx context.Context, obj runtime.Object
 		return fmt.Errorf("expected a Secret but got a %T", obj)
 	}
 
-	log.Info("Validating Secret Creates")
-	prqName, found := secret.Labels[ProjectResourceQuotaLabel]
+	log.Info("Validating Secret creation")
+	prqName, found := secret.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
 		return nil
 	}

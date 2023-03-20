@@ -73,11 +73,8 @@ func (a *serviceAnnotator) Default(ctx context.Context, obj runtime.Object) erro
 				return nil
 			}
 
-			if svc.Labels == nil {
-				svc.Labels = map[string]string{}
-			}
-			svc.Labels[ProjectResourceQuotaLabel] = prq.Name
-			log.Info("Service Labeled")
+			AddAnnotation(svc, ProjectResourceQuotaAnnotation, prq.Name)
+			log.Info("Service annotated")
 			return nil
 		}
 	}
@@ -132,8 +129,8 @@ func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Objec
 		return fmt.Errorf("expected a Service but got a %T", obj)
 	}
 
-	log.Info("Validating Service Creates")
-	prqName, found := svc.Labels[ProjectResourceQuotaLabel]
+	log.Info("Validating Service creation")
+	prqName, found := svc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
 		return nil
 	}
@@ -170,10 +167,10 @@ func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj ru
 		return fmt.Errorf("expected a Service but got a %T", newObj)
 	}
 
-	log.Info("Validating Service Updates")
-	prqName, found := newSvc.Labels[ProjectResourceQuotaLabel]
+	log.Info("Validating Service creation")
+	prqName, found := newSvc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaLabel)
+		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaAnnotation)
 	}
 
 	// get the current projectresourcequotas.jenting.io CR

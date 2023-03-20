@@ -73,11 +73,8 @@ func (a *persistentVolumeClaimAnnotator) Default(ctx context.Context, obj runtim
 				return nil
 			}
 
-			if pvc.Labels == nil {
-				pvc.Labels = map[string]string{}
-			}
-			pvc.Labels[ProjectResourceQuotaLabel] = prq.Name
-			log.Info("PersistentVolumeClaim Labeled")
+			AddAnnotation(pvc, ProjectResourceQuotaAnnotation, prq.Name)
+			log.Info("PersistentVolumeClaim annotated")
 			return nil
 		}
 	}
@@ -99,8 +96,8 @@ func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj
 		return fmt.Errorf("expected a PersistentVolumeClaim but got a %T", obj)
 	}
 
-	log.Info("Validating PersistentVolumeClaim Creates")
-	prqName, found := pvc.Labels[ProjectResourceQuotaLabel]
+	log.Info("Validating PersistentVolumeClaim creation")
+	prqName, found := pvc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
 		return nil
 	}
