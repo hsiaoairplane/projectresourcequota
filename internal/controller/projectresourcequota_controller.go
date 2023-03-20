@@ -22,7 +22,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -68,13 +68,18 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 
 	prq := &jentingiov1.ProjectResourceQuota{}
 	if err := r.Get(ctx, req.NamespacedName, prq); err != nil {
+		if errors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+
+		log.Error(err, "unable to get projectresourcequota")
 		return ctrl.Result{}, err
 	}
 	if prq.Status.Used == nil {
 		prq.Status.Used = make(corev1.ResourceList)
 	}
 
-	anno, ok := prq.Annotations[v1.LastAppliedConfigAnnotation]
+	anno, ok := prq.Annotations[corev1.LastAppliedConfigAnnotation]
 	if ok {
 		oldPrq := &jentingiov1.ProjectResourceQuota{}
 		if err := json.Unmarshal([]byte(anno), oldPrq); err != nil {
