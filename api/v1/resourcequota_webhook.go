@@ -57,20 +57,28 @@ func (a *resourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object
 	}
 
 	for _, prq := range prqList.Items {
-		for _, ns := range prq.Spec.Namespaces {
-			if ns == rq.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourceQuotas]
-				if !ok {
-					return nil
-				}
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
-				if rq.Annotations == nil {
-					rq.Annotations = map[string]string{}
-				}
-				rq.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("ResourceQuota Labeled")
+		for _, ns := range prq.Spec.Namespaces {
+			// skip the namespace that is not within the prq.spec.namespaces
+			if ns != rq.Namespace {
+				continue
+			}
+
+			_, ok := prq.Spec.Hard[corev1.ResourceQuotas]
+			if !ok {
 				return nil
 			}
+
+			if rq.Annotations == nil {
+				rq.Annotations = map[string]string{}
+			}
+			rq.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("ResourceQuota Labeled")
+			return nil
 		}
 	}
 

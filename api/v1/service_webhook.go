@@ -57,20 +57,28 @@ func (a *serviceAnnotator) Default(ctx context.Context, obj runtime.Object) erro
 	}
 
 	for _, prq := range prqList.Items {
-		for _, ns := range prq.Spec.Namespaces {
-			if ns == svc.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourceServices]
-				if !ok {
-					return nil
-				}
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
-				if svc.Annotations == nil {
-					svc.Annotations = map[string]string{}
-				}
-				svc.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Service Labeled")
+		for _, ns := range prq.Spec.Namespaces {
+			// skip the namespace that is not within the prq.spec.namespaces
+			if ns != svc.Namespace {
+				continue
+			}
+
+			_, ok := prq.Spec.Hard[corev1.ResourceServices]
+			if !ok {
 				return nil
 			}
+
+			if svc.Annotations == nil {
+				svc.Annotations = map[string]string{}
+			}
+			svc.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("Service Labeled")
+			return nil
 		}
 	}
 

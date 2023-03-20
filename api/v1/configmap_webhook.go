@@ -57,22 +57,28 @@ func (a *configMapAnnotator) Default(ctx context.Context, obj runtime.Object) er
 	}
 
 	for _, prq := range prqList.Items {
-		log.Info("ConfigMap Default", "spec.namespaces", prq.Spec.Namespaces)
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
 		for _, ns := range prq.Spec.Namespaces {
-			if ns == cm.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourceConfigMaps]
-				if !ok {
-					return nil
-				}
+			// skip the namespace that is not within the prq.spec.namespaces
+			if ns != cm.Namespace {
+				continue
+			}
 
-				if cm.Labels == nil {
-					cm.Labels = map[string]string{}
-				}
-				cm.Labels[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("ConfigMap Labeled")
+			_, ok := prq.Spec.Hard[corev1.ResourceConfigMaps]
+			if !ok {
 				return nil
 			}
+
+			if cm.Labels == nil {
+				cm.Labels = map[string]string{}
+			}
+			cm.Labels[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("ConfigMap Labeled")
+			return nil
 		}
 	}
 

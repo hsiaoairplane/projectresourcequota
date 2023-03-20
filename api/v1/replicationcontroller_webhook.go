@@ -57,20 +57,28 @@ func (a *replicationControllerAnnotator) Default(ctx context.Context, obj runtim
 	}
 
 	for _, prq := range prqList.Items {
-		for _, ns := range prq.Spec.Namespaces {
-			if ns == rc.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourceReplicationControllers]
-				if !ok {
-					return nil
-				}
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
-				if rc.Annotations == nil {
-					rc.Annotations = map[string]string{}
-				}
-				rc.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("ReplicationController Labeled")
+		for _, ns := range prq.Spec.Namespaces {
+			// skip the namespace that is not within the prq.spec.namespaces
+			if ns != rc.Namespace {
+				continue
+			}
+
+			_, ok := prq.Spec.Hard[corev1.ResourceReplicationControllers]
+			if !ok {
 				return nil
 			}
+
+			if rc.Annotations == nil {
+				rc.Annotations = map[string]string{}
+			}
+			rc.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("ReplicationController Labeled")
+			return nil
 		}
 	}
 

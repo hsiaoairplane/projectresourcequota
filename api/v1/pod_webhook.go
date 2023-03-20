@@ -58,20 +58,28 @@ func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
 	}
 
 	for _, prq := range prqList.Items {
-		for _, ns := range prq.Spec.Namespaces {
-			if ns == pod.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourcePods]
-				if !ok {
-					return nil
-				}
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
-				if pod.Annotations == nil {
-					pod.Annotations = map[string]string{}
-				}
-				pod.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Pod Labeled")
+		for _, ns := range prq.Spec.Namespaces {
+			if ns != pod.Namespace {
+				// skip the namespace that is not within the prq.spec.namespaces
+				continue
+			}
+
+			_, ok := prq.Spec.Hard[corev1.ResourcePods]
+			if !ok {
 				return nil
 			}
+
+			if pod.Annotations == nil {
+				pod.Annotations = map[string]string{}
+			}
+			pod.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("Pod Labeled")
+			return nil
 		}
 	}
 

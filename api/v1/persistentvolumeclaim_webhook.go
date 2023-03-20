@@ -57,20 +57,28 @@ func (a *persistentVolumeClaimAnnotator) Default(ctx context.Context, obj runtim
 	}
 
 	for _, prq := range prqList.Items {
-		for _, ns := range prq.Spec.Namespaces {
-			if ns == pvc.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourcePersistentVolumeClaims]
-				if !ok {
-					return nil
-				}
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
-				if pvc.Annotations == nil {
-					pvc.Annotations = map[string]string{}
-				}
-				pvc.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("PersistentVolumeClaim Labeled")
+		for _, ns := range prq.Spec.Namespaces {
+			// skip the namespace that is not within the prq.spec.namespaces
+			if ns != pvc.Namespace {
+				continue
+			}
+
+			_, ok := prq.Spec.Hard[corev1.ResourcePersistentVolumeClaims]
+			if !ok {
 				return nil
 			}
+
+			if pvc.Annotations == nil {
+				pvc.Annotations = map[string]string{}
+			}
+			pvc.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("PersistentVolumeClaim Labeled")
+			return nil
 		}
 	}
 

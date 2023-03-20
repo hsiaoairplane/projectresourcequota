@@ -57,20 +57,28 @@ func (a *secretAnnotator) Default(ctx context.Context, obj runtime.Object) error
 	}
 
 	for _, prq := range prqList.Items {
-		for _, ns := range prq.Spec.Namespaces {
-			if ns == secret.Namespace {
-				_, ok := prq.Spec.Hard[corev1.ResourceSecrets]
-				if !ok {
-					return nil
-				}
+		// skip the projectresourcequota CR that is being deleted
+		if prq.DeletionTimestamp != nil {
+			continue
+		}
 
-				if secret.Annotations == nil {
-					secret.Annotations = map[string]string{}
-				}
-				secret.Annotations[ProjectResourceQuotaLabel] = prq.Name
-				log.Info("Secret Labeled")
+		for _, ns := range prq.Spec.Namespaces {
+			// skip the namespace that is not within the prq.spec.namespaces
+			if ns != secret.Namespace {
+				continue
+			}
+
+			_, ok := prq.Spec.Hard[corev1.ResourceSecrets]
+			if !ok {
 				return nil
 			}
+
+			if secret.Annotations == nil {
+				secret.Annotations = map[string]string{}
+			}
+			secret.Annotations[ProjectResourceQuotaLabel] = prq.Name
+			log.Info("Secret Labeled")
+			return nil
 		}
 	}
 
