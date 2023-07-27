@@ -26,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func SetupServiceWebhookWithManager(mgr ctrl.Manager) error {
@@ -122,76 +123,76 @@ func (v *serviceValidator) validateServiceLoadBalancer(ctx context.Context, obj 
 	return nil
 }
 
-func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
 	svc, ok := obj.(*corev1.Service)
 	if !ok {
-		return fmt.Errorf("expected a Service but got a %T", obj)
+		return nil, fmt.Errorf("expected a Service but got a %T", obj)
 	}
 
 	log.Info("Validating Service creation")
 	prqName, found := svc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR
 	prq := &ProjectResourceQuota{}
 	if err := v.Client.Get(ctx, types.NamespacedName{Name: prqName}, prq); err != nil {
-		return err
+		return nil, err
 	}
 
 	// validate services
 	if err := v.validateService(ctx, obj, prq); err != nil {
-		return err
+		return nil, err
 	}
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeNodePort:
 		// validate services.nodeports
-		return v.validateServiceNodePort(ctx, obj, prq)
+		return nil, v.validateServiceNodePort(ctx, obj, prq)
 	case corev1.ServiceTypeLoadBalancer:
 		// validate services.loadbalancers
-		return v.validateServiceLoadBalancer(ctx, obj, prq)
+		return nil, v.validateServiceLoadBalancer(ctx, obj, prq)
 	}
-	return nil
+	return nil, nil
 }
 
-func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
 	oldSvc, ok := newObj.(*corev1.Service)
 	if !ok {
-		return fmt.Errorf("expected a Service but got a %T", oldSvc)
+		return nil, fmt.Errorf("expected a Service but got a %T", oldSvc)
 	}
 	newSvc, ok := newObj.(*corev1.Service)
 	if !ok {
-		return fmt.Errorf("expected a Service but got a %T", newObj)
+		return nil, fmt.Errorf("expected a Service but got a %T", newObj)
 	}
 
 	log.Info("Validating Service creation")
 	prqName, found := newSvc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
-		return fmt.Errorf("missing annotation %s", ProjectResourceQuotaAnnotation)
+		return nil, fmt.Errorf("missing annotation %s", ProjectResourceQuotaAnnotation)
 	}
 
 	// get the current projectresourcequotas.jenting.io CR
 	prq := &ProjectResourceQuota{}
 	if err := v.Client.Get(ctx, types.NamespacedName{Name: prqName}, prq); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := v.validateService(ctx, newObj, prq); err != nil {
-		return err
+		return nil, err
 	}
 
 	if newSvc.Spec.Type == corev1.ServiceTypeNodePort && oldSvc.Spec.Type != corev1.ServiceTypeNodePort {
-		return v.validateServiceNodePort(ctx, newObj, prq)
+		return nil, v.validateServiceNodePort(ctx, newObj, prq)
 	}
 	if newSvc.Spec.Type == corev1.ServiceTypeLoadBalancer && oldSvc.Spec.Type != corev1.ServiceTypeLoadBalancer {
-		return v.validateServiceLoadBalancer(ctx, newObj, prq)
+		return nil, v.validateServiceLoadBalancer(ctx, newObj, prq)
 	}
-	return nil
+	return nil, nil
 }
 
-func (v *serviceValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (v *serviceValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

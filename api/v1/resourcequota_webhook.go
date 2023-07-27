@@ -26,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func SetupResourceQuotaWebhookWithManager(mgr ctrl.Manager) error {
@@ -89,23 +90,23 @@ type resourceQuotaValidator struct {
 	client.Client
 }
 
-func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
 	resourceQuota, ok := obj.(*corev1.ResourceQuota)
 	if !ok {
-		return fmt.Errorf("expected a ResourceQuota but got a %T", obj)
+		return nil, fmt.Errorf("expected a ResourceQuota but got a %T", obj)
 	}
 
 	log.Info("Validating ResourceQuota creation")
 	prqName, found := resourceQuota.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR
 	prq := &ProjectResourceQuota{}
 	if err := v.Client.Get(ctx, types.NamespacedName{Name: prqName}, prq); err != nil {
-		return err
+		return nil, err
 	}
 
 	// check the status.used.resourcequotas is less than spec.hard.resourcequotas
@@ -113,15 +114,15 @@ func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime
 	used := prq.Status.Used[corev1.ResourceQuotas]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceQuotas]) != 1 {
-		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceQuotas, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceQuotas, hard.String(), used.String())
 	}
-	return nil
+	return nil, nil
 }
 
-func (v *resourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return nil
+func (v *resourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (v *resourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (v *resourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

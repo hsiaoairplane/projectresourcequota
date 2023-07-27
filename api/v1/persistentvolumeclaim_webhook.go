@@ -26,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 func SetupPersistentVolumeClaimWebhookWithManager(mgr ctrl.Manager) error {
@@ -89,23 +90,23 @@ type persistentVolumeClaimValidator struct {
 	client.Client
 }
 
-func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
 	pvc, ok := obj.(*corev1.PersistentVolumeClaim)
 	if !ok {
-		return fmt.Errorf("expected a PersistentVolumeClaim but got a %T", obj)
+		return nil, fmt.Errorf("expected a PersistentVolumeClaim but got a %T", obj)
 	}
 
 	log.Info("Validating PersistentVolumeClaim creation")
 	prqName, found := pvc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	// get the current projectresourcequotas.jenting.io CR
 	prq := &ProjectResourceQuota{}
 	if err := v.Client.Get(ctx, types.NamespacedName{Name: prqName}, prq); err != nil {
-		return err
+		return nil, err
 	}
 
 	// check the status.used.persistentvolumeclaims is less than spec.hard.persistentvolumeclaims
@@ -113,15 +114,15 @@ func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, obj
 	used := prq.Status.Used[corev1.ResourcePersistentVolumeClaims]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourcePersistentVolumeClaims]) != 1 {
-		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourcePersistentVolumeClaims, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourcePersistentVolumeClaims, hard.String(), used.String())
 	}
-	return nil
+	return nil, nil
 }
 
-func (v *persistentVolumeClaimValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
-	return nil
+func (v *persistentVolumeClaimValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
 
-func (v *persistentVolumeClaimValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (v *persistentVolumeClaimValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 var resourceNameList = []corev1.ResourceName{
@@ -142,36 +143,36 @@ func (v *projectResourceQuotaValidator) validateResourceName(ctx context.Context
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
 	prq, ok := obj.(*ProjectResourceQuota)
 	if !ok {
-		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", obj)
+		return nil, fmt.Errorf("expected a ProjectResourceQuota but got a %T", obj)
 	}
 
 	// validate the spec.namespaces is not in other CRs
 	if err := v.validateNamespace(ctx, prq.Name, prq.Spec.Namespaces); err != nil {
-		return err
+		return nil, err
 	}
 
 	// validate the given resource name is supported
-	return v.validateResourceName(ctx, prq.Spec.Hard)
+	return nil, v.validateResourceName(ctx, prq.Spec.Hard)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) error {
+func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
 	prq, ok := newObj.(*ProjectResourceQuota)
 	if !ok {
-		return fmt.Errorf("expected a ProjectResourceQuota but got a %T", newObj)
+		return nil, fmt.Errorf("expected a ProjectResourceQuota but got a %T", newObj)
 	}
 
 	// validate the spec.namespaces is not in other CRs
 	if err := v.validateNamespace(ctx, prq.Name, prq.Spec.Namespaces); err != nil {
-		return err
+		return nil, err
 	}
 
 	// validate the given resource name is supported
 	if err := v.validateResourceName(ctx, prq.Spec.Hard); err != nil {
-		return err
+		return nil, err
 	}
 
 	// validates the spec.hard is not less than status.used
@@ -179,13 +180,13 @@ func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldO
 		hard := prq.Spec.Hard[resourceName]
 		used := prq.Status.Used[resourceName]
 		if hard.Cmp(used) == -1 {
-			return fmt.Errorf("hard limit %s is less than used %s", hard.String(), used.String())
+			return nil, fmt.Errorf("hard limit %s is less than used %s", hard.String(), used.String())
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (v *projectResourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	return nil
+func (v *projectResourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }
