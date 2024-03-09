@@ -2,7 +2,6 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -25,6 +24,26 @@ webhooks:
     - UPDATE
     resources:
     - configmaps
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-jenting-io-v1-projectresourcequota
+  failurePolicy: Fail
+  name: mprojectresourcequota.kb.io
+  rules:
+  - apiGroups:
+    - jenting.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - projectresourcequotas
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -67,26 +86,6 @@ webhooks:
     - UPDATE
     resources:
     - pods
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /mutate-jenting-io-v1-projectresourcequota
-  failurePolicy: Fail
-  name: mprojectresourcequota.kb.io
-  rules:
-  - apiGroups:
-    - jenting.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - projectresourcequotas
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -176,7 +175,6 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  creationTimestamp: null
   name: validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -241,26 +239,6 @@ webhooks:
     - UPDATE
     resources:
     - pods
-  sideEffects: None
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: webhook-service
-      namespace: system
-      path: /validate-jenting-io-v1-projectresourcequota
-  failurePolicy: Fail
-  name: vprojectresourcequota.kb.io
-  rules:
-  - apiGroups:
-    - jenting.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - projectresourcequotas
   sideEffects: None
 - admissionReviewVersions:
   - v1
@@ -345,4 +323,24 @@ webhooks:
     - UPDATE
     resources:
     - services
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-jenting-io-v1-projectresourcequota
+  failurePolicy: Fail
+  name: vprojectresourcequota.kb.io
+  rules:
+  - apiGroups:
+    - jenting.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - projectresourcequotas
   sideEffects: None
