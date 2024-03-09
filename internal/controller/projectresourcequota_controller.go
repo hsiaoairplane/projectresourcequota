@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	jentingiov1 "github.com/jenting/projectresourcequota/api/v1"
@@ -548,31 +547,38 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 func (r *ProjectResourceQuotaReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&jentingiov1.ProjectResourceQuota{}, builder.WithPredicates(predicate.ResourceVersionChangedPredicate{})).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}}, // ConfigMap
+		Watches(
+			&corev1.ConfigMap{}, // ConfigMap
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(&source.Kind{Type: &corev1.PersistentVolumeClaim{}}, // PersistentVolumeClaim
+		Watches(
+			&corev1.PersistentVolumeClaim{}, // PersistentVolumeClaim
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(&source.Kind{Type: &corev1.Pod{}}, // Pod
+		Watches(
+			&corev1.Pod{}, // Pod
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(&source.Kind{Type: &corev1.ReplicationController{}}, // ReplicationController
+		Watches(
+			&corev1.ReplicationController{}, // ReplicationController
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(&source.Kind{Type: &corev1.ResourceQuota{}}, // ResourceQuota
+		Watches(
+			&corev1.ResourceQuota{}, // ResourceQuota
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(&source.Kind{Type: &corev1.Secret{}}, // Secret
+		Watches(
+			&corev1.Secret{}, // Secret
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
-		Watches(&source.Kind{Type: &corev1.Service{}}, // Service
+		Watches(
+			&corev1.Service{}, // Service
 			handler.EnqueueRequestsFromMapFunc(r.findObjects),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
