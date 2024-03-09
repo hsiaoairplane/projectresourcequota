@@ -579,7 +579,7 @@ func (r *ProjectResourceQuotaReconciler) SetupWithManager(mgr ctrl.Manager) erro
 		Complete(r)
 }
 
-func (r *ProjectResourceQuotaReconciler) findObjects(obj client.Object) []reconcile.Request {
+func (r *ProjectResourceQuotaReconciler) findObjects(ctx context.Context, obj client.Object) []reconcile.Request {
 	prqName, found := obj.GetAnnotations()[jentingiov1.ProjectResourceQuotaAnnotation]
 	if !found {
 		return nil
