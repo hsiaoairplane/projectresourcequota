@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,8 +29,7 @@ import (
 )
 
 func SetupSecretWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&corev1.Secret{}).
+	return ctrl.NewWebhookManagedBy(mgr, &corev1.Secret{}).
 		WithDefaulter(&secretAnnotator{mgr.GetClient()}).
 		WithValidator(&secretValidator{mgr.GetClient()}).
 		Complete()
@@ -44,12 +42,8 @@ type secretAnnotator struct {
 	client.Client
 }
 
-func (a *secretAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+func (a *secretAnnotator) Default(ctx context.Context, secret *corev1.Secret) error {
 	log := logf.FromContext(ctx)
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return fmt.Errorf("expected a Secret but got a %T", obj)
-	}
 
 	// check whether one of the projectresourcequotas.jenting.io CR spec.hard.secrets is set
 	prqList := &ProjectResourceQuotaList{}
@@ -90,12 +84,8 @@ type secretValidator struct {
 	client.Client
 }
 
-func (v *secretValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *secretValidator) ValidateCreate(ctx context.Context, secret *corev1.Secret) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil, fmt.Errorf("expected a Secret but got a %T", obj)
-	}
 
 	log.Info("Validating Secret creation")
 	prqName, found := secret.Annotations[ProjectResourceQuotaAnnotation]
@@ -119,10 +109,10 @@ func (v *secretValidator) ValidateCreate(ctx context.Context, obj runtime.Object
 	return nil, nil
 }
 
-func (v *secretValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (v *secretValidator) ValidateUpdate(ctx context.Context, oldObj, newObj *corev1.Secret) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (v *secretValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *secretValidator) ValidateDelete(ctx context.Context, secret *corev1.Secret) (admission.Warnings, error) {
 	return nil, nil
 }

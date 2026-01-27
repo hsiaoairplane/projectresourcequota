@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,8 +29,7 @@ import (
 )
 
 func SetupConfigMapWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&corev1.ConfigMap{}).
+	return ctrl.NewWebhookManagedBy(mgr, &corev1.ConfigMap{}).
 		WithDefaulter(&configMapAnnotator{mgr.GetClient()}).
 		WithValidator(&configMapValidator{mgr.GetClient()}).
 		Complete()
@@ -44,12 +42,8 @@ type configMapAnnotator struct {
 	client.Client
 }
 
-func (a *configMapAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+func (a *configMapAnnotator) Default(ctx context.Context, cm *corev1.ConfigMap) error {
 	log := logf.FromContext(ctx)
-	cm, ok := obj.(*corev1.ConfigMap)
-	if !ok {
-		return fmt.Errorf("expected a ConfigMap but got a %T", obj)
-	}
 
 	// check whether one of the projectresourcequotas.jenting.io CR spec.hard.configmaps is set
 	prqList := &ProjectResourceQuotaList{}
@@ -90,12 +84,8 @@ type configMapValidator struct {
 	client.Client
 }
 
-func (v *configMapValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *configMapValidator) ValidateCreate(ctx context.Context, cm *corev1.ConfigMap) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
-	cm, ok := obj.(*corev1.ConfigMap)
-	if !ok {
-		return nil, fmt.Errorf("expected a ConfigMap but got a %T", obj)
-	}
 
 	log.Info("Validating ConfigMap creation")
 	prqName, found := cm.Annotations[ProjectResourceQuotaAnnotation]
@@ -119,10 +109,10 @@ func (v *configMapValidator) ValidateCreate(ctx context.Context, obj runtime.Obj
 	return nil, nil
 }
 
-func (v *configMapValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (v *configMapValidator) ValidateUpdate(ctx context.Context, oldObj, newObj *corev1.ConfigMap) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (v *configMapValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *configMapValidator) ValidateDelete(ctx context.Context, cm *corev1.ConfigMap) (admission.Warnings, error) {
 	return nil, nil
 }
