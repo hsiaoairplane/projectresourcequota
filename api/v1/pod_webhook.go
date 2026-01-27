@@ -22,7 +22,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,8 +30,7 @@ import (
 )
 
 func SetupPodWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&corev1.Pod{}).
+	return ctrl.NewWebhookManagedBy(mgr, &corev1.Pod{}).
 		WithDefaulter(&podAnnotator{mgr.GetClient()}).
 		WithValidator(&podValidator{mgr.GetClient()}).
 		Complete()
@@ -45,12 +43,8 @@ type podAnnotator struct {
 	client.Client
 }
 
-func (a *podAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+func (a *podAnnotator) Default(ctx context.Context, pod *corev1.Pod) error {
 	log := logf.FromContext(ctx)
-	pod, ok := obj.(*corev1.Pod)
-	if !ok {
-		return fmt.Errorf("expected a Pod but got a %T", obj)
-	}
 
 	// check whether one of the projectresourcequotas.jenting.io CR spec.hard.pods is set
 	prqList := &ProjectResourceQuotaList{}
@@ -91,12 +85,8 @@ type podValidator struct {
 	client.Client
 }
 
-func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *podValidator) ValidateCreate(ctx context.Context, pod *corev1.Pod) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
-	pod, ok := obj.(*corev1.Pod)
-	if !ok {
-		return nil, fmt.Errorf("expected a Pod but got a %T", obj)
-	}
 
 	log.Info("Validating Pod creation")
 	prqName, found := pod.Annotations[ProjectResourceQuotaAnnotation]
@@ -241,12 +231,12 @@ func (v *podValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (
 	return nil, nil
 }
 
-func (v *podValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (v *podValidator) ValidateUpdate(ctx context.Context, oldObj, newObj *corev1.Pod) (admission.Warnings, error) {
 	// we don't need to validate resources.requests.* and resources.limits.* update
 	// because Kubernetes does not allow to update them
 	return nil, nil
 }
 
-func (v *podValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *podValidator) ValidateDelete(ctx context.Context, pod *corev1.Pod) (admission.Warnings, error) {
 	return nil, nil
 }

@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -74,8 +73,7 @@ var resourceNameMap = map[corev1.ResourceName]struct{}{
 }
 
 func SetupProjectResourceQuotaWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&ProjectResourceQuota{}).
+	return ctrl.NewWebhookManagedBy(mgr, &ProjectResourceQuota{}).
 		WithDefaulter(&projectResourceQuotaAnnotator{mgr.GetClient()}).
 		WithValidator(&projectResourceQuotaValidator{mgr.GetClient()}).
 		Complete()
@@ -88,19 +86,14 @@ type projectResourceQuotaAnnotator struct {
 	client.Client
 }
 
-func (a *projectResourceQuotaAnnotator) Default(ctx context.Context, obj runtime.Object) error {
-	prq, ok := obj.(*ProjectResourceQuota)
-	if !ok {
-		return fmt.Errorf("expected a Pod but got a %T", obj)
-	}
-
+func (a *projectResourceQuotaAnnotator) Default(ctx context.Context, prq *ProjectResourceQuota) error {
 	// the projectresourcequota is under deletion, no need to add finalizer
 	if prq.DeletionTimestamp != nil {
 		return nil
 	}
 
 	// check whether finalizer is added
-	return AddFinalizer(ProjectResourceQuotaFinalizer, obj)
+	return AddFinalizer(ProjectResourceQuotaFinalizer, prq)
 }
 
 //+kubebuilder:webhook:path=/validate-jenting-io-v1-projectresourcequota,mutating=false,failurePolicy=fail,sideEffects=None,groups=jenting.io,resources=projectresourcequotas,verbs=create;update,versions=v1,name=vprojectresourcequota.kb.io,admissionReviewVersions=v1
@@ -143,12 +136,7 @@ func (v *projectResourceQuotaValidator) validateResourceName(ctx context.Context
 }
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
-	prq, ok := obj.(*ProjectResourceQuota)
-	if !ok {
-		return nil, fmt.Errorf("expected a ProjectResourceQuota but got a %T", obj)
-	}
-
+func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, prq *ProjectResourceQuota) (admission.Warnings, error) {
 	// validate the spec.namespaces is not in other CRs
 	if err := v.validateNamespace(ctx, prq.Name, prq.Spec.Namespaces); err != nil {
 		return nil, err
@@ -159,26 +147,21 @@ func (v *projectResourceQuotaValidator) ValidateCreate(ctx context.Context, obj 
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
-	prq, ok := newObj.(*ProjectResourceQuota)
-	if !ok {
-		return nil, fmt.Errorf("expected a ProjectResourceQuota but got a %T", newObj)
-	}
-
+func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldPrd, newPrq *ProjectResourceQuota) (admission.Warnings, error) {
 	// validate the spec.namespaces is not in other CRs
-	if err := v.validateNamespace(ctx, prq.Name, prq.Spec.Namespaces); err != nil {
+	if err := v.validateNamespace(ctx, newPrq.Name, newPrq.Spec.Namespaces); err != nil {
 		return nil, err
 	}
 
 	// validate the given resource name is supported
-	if err := v.validateResourceName(ctx, prq.Spec.Hard); err != nil {
+	if err := v.validateResourceName(ctx, newPrq.Spec.Hard); err != nil {
 		return nil, err
 	}
 
 	// validates the spec.hard is not less than status.used
 	for _, resourceName := range resourceNameList {
-		hard := prq.Spec.Hard[resourceName]
-		used := prq.Status.Used[resourceName]
+		hard := newPrq.Spec.Hard[resourceName]
+		used := newPrq.Status.Used[resourceName]
 		if hard.Cmp(used) == -1 {
 			return nil, fmt.Errorf("hard limit %s is less than used %s", hard.String(), used.String())
 		}
@@ -187,6 +170,6 @@ func (v *projectResourceQuotaValidator) ValidateUpdate(ctx context.Context, oldO
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (v *projectResourceQuotaValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *projectResourceQuotaValidator) ValidateDelete(ctx context.Context, obj *ProjectResourceQuota) (admission.Warnings, error) {
 	return nil, nil
 }

@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,8 +29,7 @@ import (
 )
 
 func SetupServiceWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&corev1.Pod{}).
+	return ctrl.NewWebhookManagedBy(mgr, &corev1.Service{}).
 		WithDefaulter(&serviceAnnotator{mgr.GetClient()}).
 		WithValidator(&serviceValidator{mgr.GetClient()}).
 		Complete()
@@ -44,12 +42,8 @@ type serviceAnnotator struct {
 	client.Client
 }
 
-func (a *serviceAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+func (a *serviceAnnotator) Default(ctx context.Context, svc *corev1.Service) error {
 	log := logf.FromContext(ctx)
-	svc, ok := obj.(*corev1.Service)
-	if !ok {
-		return fmt.Errorf("expected a Service but got a %T", obj)
-	}
 
 	// check whether one of the projectresourcequotas.jenting.io CR spec.hard.services is set
 	prqList := &ProjectResourceQuotaList{}
@@ -90,7 +84,7 @@ type serviceValidator struct {
 	client.Client
 }
 
-func (v *serviceValidator) validateService(ctx context.Context, obj runtime.Object, prq *ProjectResourceQuota) error {
+func (v *serviceValidator) validateService(ctx context.Context, svc *corev1.Service, prq *ProjectResourceQuota) error {
 	// check the status.used.services is less than spec.hard.services
 	hard := prq.Spec.Hard[corev1.ResourceServices]
 	used := prq.Status.Used[corev1.ResourceServices]
@@ -101,7 +95,7 @@ func (v *serviceValidator) validateService(ctx context.Context, obj runtime.Obje
 	return nil
 }
 
-func (v *serviceValidator) validateServiceNodePort(ctx context.Context, obj runtime.Object, prq *ProjectResourceQuota) error {
+func (v *serviceValidator) validateServiceNodePort(ctx context.Context, svc *corev1.Service, prq *ProjectResourceQuota) error {
 	// check the status.used.services.nodeports is less than spec.hard.services.nodeports
 	hard := prq.Spec.Hard[corev1.ResourceServicesNodePorts]
 	used := prq.Status.Used[corev1.ResourceServicesNodePorts]
@@ -112,7 +106,7 @@ func (v *serviceValidator) validateServiceNodePort(ctx context.Context, obj runt
 	return nil
 }
 
-func (v *serviceValidator) validateServiceLoadBalancer(ctx context.Context, obj runtime.Object, prq *ProjectResourceQuota) error {
+func (v *serviceValidator) validateServiceLoadBalancer(ctx context.Context, svc *corev1.Service, prq *ProjectResourceQuota) error {
 	// check the status.used.services.loadbalancers is less than spec.hard.services.loadbalancers
 	hard := prq.Spec.Hard[corev1.ResourceServicesLoadBalancers]
 	used := prq.Status.Used[corev1.ResourceServicesLoadBalancers]
@@ -123,12 +117,8 @@ func (v *serviceValidator) validateServiceLoadBalancer(ctx context.Context, obj 
 	return nil
 }
 
-func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *serviceValidator) ValidateCreate(ctx context.Context, svc *corev1.Service) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
-	svc, ok := obj.(*corev1.Service)
-	if !ok {
-		return nil, fmt.Errorf("expected a Service but got a %T", obj)
-	}
 
 	log.Info("Validating Service creation")
 	prqName, found := svc.Annotations[ProjectResourceQuotaAnnotation]
@@ -143,30 +133,22 @@ func (v *serviceValidator) ValidateCreate(ctx context.Context, obj runtime.Objec
 	}
 
 	// validate services
-	if err := v.validateService(ctx, obj, prq); err != nil {
+	if err := v.validateService(ctx, svc, prq); err != nil {
 		return nil, err
 	}
 	switch svc.Spec.Type {
 	case corev1.ServiceTypeNodePort:
 		// validate services.nodeports
-		return nil, v.validateServiceNodePort(ctx, obj, prq)
+		return nil, v.validateServiceNodePort(ctx, svc, prq)
 	case corev1.ServiceTypeLoadBalancer:
 		// validate services.loadbalancers
-		return nil, v.validateServiceLoadBalancer(ctx, obj, prq)
+		return nil, v.validateServiceLoadBalancer(ctx, svc, prq)
 	}
 	return nil, nil
 }
 
-func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldSvc, newSvc *corev1.Service) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
-	oldSvc, ok := newObj.(*corev1.Service)
-	if !ok {
-		return nil, fmt.Errorf("expected a Service but got a %T", oldSvc)
-	}
-	newSvc, ok := newObj.(*corev1.Service)
-	if !ok {
-		return nil, fmt.Errorf("expected a Service but got a %T", newObj)
-	}
 
 	log.Info("Validating Service creation")
 	prqName, found := newSvc.Annotations[ProjectResourceQuotaAnnotation]
@@ -180,19 +162,19 @@ func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldObj, newObj ru
 		return nil, err
 	}
 
-	if err := v.validateService(ctx, newObj, prq); err != nil {
+	if err := v.validateService(ctx, newSvc, prq); err != nil {
 		return nil, err
 	}
 
 	if newSvc.Spec.Type == corev1.ServiceTypeNodePort && oldSvc.Spec.Type != corev1.ServiceTypeNodePort {
-		return nil, v.validateServiceNodePort(ctx, newObj, prq)
+		return nil, v.validateServiceNodePort(ctx, newSvc, prq)
 	}
 	if newSvc.Spec.Type == corev1.ServiceTypeLoadBalancer && oldSvc.Spec.Type != corev1.ServiceTypeLoadBalancer {
-		return nil, v.validateServiceLoadBalancer(ctx, newObj, prq)
+		return nil, v.validateServiceLoadBalancer(ctx, newSvc, prq)
 	}
 	return nil, nil
 }
 
-func (v *serviceValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *serviceValidator) ValidateDelete(ctx context.Context, newSvc *corev1.Service) (admission.Warnings, error) {
 	return nil, nil
 }

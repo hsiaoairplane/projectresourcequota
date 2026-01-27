@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,8 +29,7 @@ import (
 )
 
 func SetupReplicationControllerWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(&corev1.ReplicationController{}).
+	return ctrl.NewWebhookManagedBy(mgr, &corev1.ReplicationController{}).
 		WithDefaulter(&replicationControllerAnnotator{mgr.GetClient()}).
 		WithValidator(&replicationControllerValidator{mgr.GetClient()}).
 		Complete()
@@ -44,12 +42,8 @@ type replicationControllerAnnotator struct {
 	client.Client
 }
 
-func (a *replicationControllerAnnotator) Default(ctx context.Context, obj runtime.Object) error {
+func (a *replicationControllerAnnotator) Default(ctx context.Context, rc *corev1.ReplicationController) error {
 	log := logf.FromContext(ctx)
-	rc, ok := obj.(*corev1.ReplicationController)
-	if !ok {
-		return fmt.Errorf("expected a ReplicationController but got a %T", obj)
-	}
 
 	// check whether one of the projectresourcequotas.jenting.io CR spec.hard.replicationcontrollers is set
 	prqList := &ProjectResourceQuotaList{}
@@ -90,12 +84,8 @@ type replicationControllerValidator struct {
 	client.Client
 }
 
-func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, rc *corev1.ReplicationController) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
-	rc, ok := obj.(*corev1.ReplicationController)
-	if !ok {
-		return nil, fmt.Errorf("expected a ReplicationController but got a %T", obj)
-	}
 
 	log.Info("Validating ReplicationController creation")
 	prqName, found := rc.Annotations[ProjectResourceQuotaAnnotation]
@@ -119,10 +109,10 @@ func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, obj
 	return nil, nil
 }
 
-func (v *replicationControllerValidator) ValidateUpdate(ctx context.Context, oldObj, newObj runtime.Object) (admission.Warnings, error) {
+func (v *replicationControllerValidator) ValidateUpdate(ctx context.Context, oldObj, newObj *corev1.ReplicationController) (admission.Warnings, error) {
 	return nil, nil
 }
 
-func (v *replicationControllerValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+func (v *replicationControllerValidator) ValidateDelete(ctx context.Context, obj *corev1.ReplicationController) (admission.Warnings, error) {
 	return nil, nil
 }
