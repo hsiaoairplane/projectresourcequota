@@ -86,10 +86,10 @@ type serviceValidator struct {
 
 func (v *serviceValidator) validateService(ctx context.Context, svc *corev1.Service, prq *ProjectResourceQuota) error {
 	// check the status.used.services is less than spec.hard.services
-	hard := prq.Spec.Hard[corev1.ResourceServices]
 	used := prq.Status.Used[corev1.ResourceServices]
+	hard := prq.Spec.Hard[corev1.ResourceServices]
 
-	if hard.Cmp(prq.Status.Used[corev1.ResourceServices]) != 1 {
+	if hard.Cmp(used) != 1 {
 		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServices, used.String(), hard.String())
 	}
 	return nil
@@ -97,10 +97,10 @@ func (v *serviceValidator) validateService(ctx context.Context, svc *corev1.Serv
 
 func (v *serviceValidator) validateServiceNodePort(ctx context.Context, svc *corev1.Service, prq *ProjectResourceQuota) error {
 	// check the status.used.services.nodeports is less than spec.hard.services.nodeports
-	hard := prq.Spec.Hard[corev1.ResourceServicesNodePorts]
 	used := prq.Status.Used[corev1.ResourceServicesNodePorts]
+	hard := prq.Spec.Hard[corev1.ResourceServicesNodePorts]
 
-	if hard.Cmp(prq.Status.Used[corev1.ResourceServicesNodePorts]) != 1 {
+	if hard.Cmp(used) != 1 {
 		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServicesNodePorts, used.String(), hard.String())
 	}
 	return nil
@@ -108,10 +108,10 @@ func (v *serviceValidator) validateServiceNodePort(ctx context.Context, svc *cor
 
 func (v *serviceValidator) validateServiceLoadBalancer(ctx context.Context, svc *corev1.Service, prq *ProjectResourceQuota) error {
 	// check the status.used.services.loadbalancers is less than spec.hard.services.loadbalancers
-	hard := prq.Spec.Hard[corev1.ResourceServicesLoadBalancers]
 	used := prq.Status.Used[corev1.ResourceServicesLoadBalancers]
+	hard := prq.Spec.Hard[corev1.ResourceServicesLoadBalancers]
 
-	if hard.Cmp(prq.Status.Used[corev1.ResourceServicesLoadBalancers]) != 1 {
+	if hard.Cmp(used) != 1 {
 		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServicesLoadBalancers, used.String(), hard.String())
 	}
 	return nil
