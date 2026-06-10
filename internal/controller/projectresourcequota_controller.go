@@ -351,43 +351,21 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			used.Add(resource.MustParse(fmt.Sprintf("%d", count)))
 			prq.Status.Used[corev1.ResourcePods] = used
 
-			var requestCPU, requestMemory, requestStorage, requestEphemeralStorage resource.Quantity
-			var limitCPU, limitMemory, limitEphemeralStorage resource.Quantity
+			totalRequests := corev1.ResourceList{}
+			totalLimits := corev1.ResourceList{}
 			for _, pod := range podList.Items {
-				for _, container := range pod.Spec.Containers {
-					// requests
-					quality := container.Resources.Requests.Cpu()
-					if quality != nil {
-						requestCPU.Add(*quality)
-					}
-					quality = container.Resources.Requests.Memory()
-					if quality != nil {
-						requestMemory.Add(*quality)
-					}
-					quality = container.Resources.Requests.Storage()
-					if quality != nil {
-						requestStorage.Add(*quality)
-					}
-					quality = container.Resources.Requests.StorageEphemeral()
-					if quality != nil {
-						requestEphemeralStorage.Add(*quality)
-					}
-
-					// limits
-					quality = container.Resources.Limits.Cpu()
-					if quality != nil {
-						limitCPU.Add(*quality)
-					}
-					quality = container.Resources.Limits.Memory()
-					if quality != nil {
-						limitMemory.Add(*quality)
-					}
-					quality = container.Resources.Limits.StorageEphemeral()
-					if quality != nil {
-						limitEphemeralStorage.Add(*quality)
-					}
-				}
+				// account for init and sidecar containers like the native ResourceQuota
+				addResourceList(totalRequests, jentingiov1.PodEffectiveRequests(&pod))
+				addResourceList(totalLimits, jentingiov1.PodEffectiveLimits(&pod))
 			}
+
+			requestCPU := totalRequests[corev1.ResourceCPU]
+			requestMemory := totalRequests[corev1.ResourceMemory]
+			requestStorage := totalRequests[corev1.ResourceStorage]
+			requestEphemeralStorage := totalRequests[corev1.ResourceEphemeralStorage]
+			limitCPU := totalLimits[corev1.ResourceCPU]
+			limitMemory := totalLimits[corev1.ResourceMemory]
+			limitEphemeralStorage := totalLimits[corev1.ResourceEphemeralStorage]
 
 			if _, found := prq.Spec.Hard[corev1.ResourceCPU]; found {
 				used := prq.Status.Used[corev1.ResourceCPU]
@@ -583,6 +561,18 @@ func (r *ProjectResourceQuotaReconciler) SetupWithManager(mgr ctrl.Manager) erro
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Complete(r)
+}
+
+// addResourceList adds the quantities in src into dst, in place.
+func addResourceList(dst, src corev1.ResourceList) {
+	for name, quantity := range src {
+		if current, ok := dst[name]; ok {
+			current.Add(quantity)
+			dst[name] = current
+		} else {
+			dst[name] = quantity.DeepCopy()
+		}
+	}
 }
 
 func (r *ProjectResourceQuotaReconciler) findObjects(ctx context.Context, obj client.Object) []reconcile.Request {
