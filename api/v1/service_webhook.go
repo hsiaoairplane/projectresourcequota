@@ -90,7 +90,7 @@ func (v *serviceValidator) validateService(ctx context.Context, svc *corev1.Serv
 	used := prq.Status.Used[corev1.ResourceServices]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceServices]) != 1 {
-		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServices, hard.String(), used.String())
+		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServices, used.String(), hard.String())
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ func (v *serviceValidator) validateServiceNodePort(ctx context.Context, svc *cor
 	used := prq.Status.Used[corev1.ResourceServicesNodePorts]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceServicesNodePorts]) != 1 {
-		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServicesNodePorts, hard.String(), used.String())
+		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServicesNodePorts, used.String(), hard.String())
 	}
 	return nil
 }
@@ -112,7 +112,7 @@ func (v *serviceValidator) validateServiceLoadBalancer(ctx context.Context, svc 
 	used := prq.Status.Used[corev1.ResourceServicesLoadBalancers]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceServicesLoadBalancers]) != 1 {
-		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServicesLoadBalancers, hard.String(), used.String())
+		return fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceServicesLoadBalancers, used.String(), hard.String())
 	}
 	return nil
 }

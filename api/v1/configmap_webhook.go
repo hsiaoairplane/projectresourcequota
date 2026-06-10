@@ -104,7 +104,7 @@ func (v *configMapValidator) ValidateCreate(ctx context.Context, cm *corev1.Conf
 	used := prq.Status.Used[corev1.ResourceConfigMaps]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceConfigMaps]) != 1 {
-		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceConfigMaps, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceConfigMaps, used.String(), hard.String())
 	}
 	return nil, nil
 }

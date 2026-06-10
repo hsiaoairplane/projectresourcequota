@@ -104,7 +104,7 @@ func (v *replicationControllerValidator) ValidateCreate(ctx context.Context, rc 
 	used := prq.Status.Used[corev1.ResourceReplicationControllers]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceReplicationControllers]) != 1 {
-		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceReplicationControllers, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceReplicationControllers, used.String(), hard.String())
 	}
 	return nil, nil
 }

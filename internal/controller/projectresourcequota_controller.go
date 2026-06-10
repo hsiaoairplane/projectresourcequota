@@ -66,12 +66,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&cm, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from configmap %s/%s", cm.Name, cm.Namespace)
+				log.Error(err, "failed to remove annotation from configmap", "namespace", cm.Namespace, "name", cm.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &cm); err != nil {
-				log.Error(err, "failed to update configmap %s/%s", cm.Name, cm.Namespace)
+				log.Error(err, "failed to update configmap", "namespace", cm.Namespace, "name", cm.Name)
 				return err
 			}
 		}
@@ -88,12 +88,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&pvc, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from persistentvolumeclaim %s/%s", pvc.Name, pvc.Namespace)
+				log.Error(err, "failed to remove annotation from persistentvolumeclaim", "namespace", pvc.Namespace, "name", pvc.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &pvc); err != nil {
-				log.Error(err, "failed to update persistentvolumeclaim %s/%s", pvc.Name, pvc.Namespace)
+				log.Error(err, "failed to update persistentvolumeclaim", "namespace", pvc.Namespace, "name", pvc.Name)
 				return err
 			}
 		}
@@ -110,12 +110,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&pod, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from pod %s/%s", pod.Name, pod.Namespace)
+				log.Error(err, "failed to remove annotation from pod", "namespace", pod.Namespace, "name", pod.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &pod); err != nil {
-				log.Error(err, "failed to update pod %s/%s", pod.Name, pod.Namespace)
+				log.Error(err, "failed to update pod", "namespace", pod.Namespace, "name", pod.Name)
 				return err
 			}
 		}
@@ -132,12 +132,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&rc, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from replicationcontroller %s/%s", rc.Name, rc.Namespace)
+				log.Error(err, "failed to remove annotation from replicationcontroller", "namespace", rc.Namespace, "name", rc.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &rc); err != nil {
-				log.Error(err, "failed to update replicationcontroller %s/%s", rc.Name, rc.Namespace)
+				log.Error(err, "failed to update replicationcontroller", "namespace", rc.Namespace, "name", rc.Name)
 				return err
 			}
 		}
@@ -154,12 +154,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&rq, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from resourcequota %s/%s", rq.Name, rq.Namespace)
+				log.Error(err, "failed to remove annotation from resourcequota", "namespace", rq.Namespace, "name", rq.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &rq); err != nil {
-				log.Error(err, "failed to update resourcequota %s/%s", rq.Name, rq.Namespace)
+				log.Error(err, "failed to update resourcequota", "namespace", rq.Namespace, "name", rq.Name)
 				return err
 			}
 		}
@@ -176,12 +176,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&secret, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from secret %s/%s", secret.Name, secret.Namespace)
+				log.Error(err, "failed to remove annotation from secret", "namespace", secret.Namespace, "name", secret.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &secret); err != nil {
-				log.Error(err, "failed to update secret %s/%s", secret.Name, secret.Namespace)
+				log.Error(err, "failed to update secret", "namespace", secret.Namespace, "name", secret.Name)
 				return err
 			}
 		}
@@ -198,12 +198,12 @@ func (r *ProjectResourceQuotaReconciler) removeAnnotationFromObjects(ctx context
 			}
 
 			if err := jentingiov1.RemoveAnnotation(&svc, jentingiov1.ProjectResourceQuotaAnnotation); err != nil {
-				log.Error(err, "failed to remove annotation from service %s/%s", svc.Name, svc.Namespace)
+				log.Error(err, "failed to remove annotation from service", "namespace", svc.Namespace, "name", svc.Name)
 				return err
 			}
 
 			if err := r.Client.Update(ctx, &svc); err != nil {
-				log.Error(err, "failed to update service %s/%s", svc.Name, svc.Namespace)
+				log.Error(err, "failed to update service", "namespace", svc.Namespace, "name", svc.Name)
 				return err
 			}
 		}

@@ -104,7 +104,7 @@ func (v *resourceQuotaValidator) ValidateCreate(ctx context.Context, resourceQuo
 	used := prq.Status.Used[corev1.ResourceQuotas]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceQuotas]) != 1 {
-		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceQuotas, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceQuotas, used.String(), hard.String())
 	}
 	return nil, nil
 }
