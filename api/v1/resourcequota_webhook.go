@@ -68,7 +68,9 @@ func (a *resourceQuotaAnnotator) Default(ctx context.Context, rq *corev1.Resourc
 				return nil
 			}
 
-			AddAnnotation(rq, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(rq, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("ResourceQuota annotated")
 			return nil
 		}

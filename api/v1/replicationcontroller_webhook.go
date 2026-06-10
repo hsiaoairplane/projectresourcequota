@@ -68,7 +68,9 @@ func (a *replicationControllerAnnotator) Default(ctx context.Context, rc *corev1
 				return nil
 			}
 
-			AddAnnotation(rc, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(rc, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("ReplicationController annotated")
 			return nil
 		}
