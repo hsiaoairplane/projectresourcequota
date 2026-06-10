@@ -104,7 +104,7 @@ func (v *podValidator) ValidateCreate(ctx context.Context, pod *corev1.Pod) (adm
 	used := prq.Status.Used[corev1.ResourcePods]
 	hard := prq.Spec.Hard[corev1.ResourcePods]
 	if hard.Cmp(used) != 1 {
-		return nil, fmt.Errorf("over project resource quota. current %s counts %v, hard limit count %v", corev1.ResourcePods, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %v, hard limit count %v", corev1.ResourcePods, used.String(), hard.String())
 	}
 
 	// calculate resource requests and limits
@@ -212,21 +212,21 @@ func (v *podValidator) ValidateCreate(ctx context.Context, pod *corev1.Pod) (adm
 	hard = prq.Spec.Hard[corev1.ResourceLimitsCPU]
 	limitCPU.Add(used)
 	if limitCPU.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsCPU, requestCPU.String(), used.String(), hard.String())
+		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsCPU, limitCPU.String(), used.String(), hard.String())
 	}
 
 	used = prq.Status.Used[corev1.ResourceLimitsMemory]
 	hard = prq.Spec.Hard[corev1.ResourceLimitsMemory]
 	limitMemory.Add(used)
 	if limitMemory.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsMemory, requestMemory.String(), used.String(), hard.String())
+		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsMemory, limitMemory.String(), used.String(), hard.String())
 	}
 
 	used = prq.Status.Used[corev1.ResourceLimitsEphemeralStorage]
 	hard = prq.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]
 	limitEphemeralStorage.Add(used)
 	if limitEphemeralStorage.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceRequestsEphemeralStorage, requestEphemeralStorage.String(), used.String(), hard.String())
+		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsEphemeralStorage, limitEphemeralStorage.String(), used.String(), hard.String())
 	}
 	return nil, nil
 }

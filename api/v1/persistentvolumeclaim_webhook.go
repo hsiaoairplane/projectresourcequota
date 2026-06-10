@@ -104,7 +104,7 @@ func (v *persistentVolumeClaimValidator) ValidateCreate(ctx context.Context, pvc
 	used := prq.Status.Used[corev1.ResourcePersistentVolumeClaims]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourcePersistentVolumeClaims]) != 1 {
-		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourcePersistentVolumeClaims, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourcePersistentVolumeClaims, used.String(), hard.String())
 	}
 	return nil, nil
 }

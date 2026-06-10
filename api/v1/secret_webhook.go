@@ -104,7 +104,7 @@ func (v *secretValidator) ValidateCreate(ctx context.Context, secret *corev1.Sec
 	used := prq.Status.Used[corev1.ResourceSecrets]
 
 	if hard.Cmp(prq.Status.Used[corev1.ResourceSecrets]) != 1 {
-		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceSecrets, hard.String(), used.String())
+		return nil, fmt.Errorf("over project resource quota. current %s counts %s, hard limit count %s", corev1.ResourceSecrets, used.String(), hard.String())
 	}
 	return nil, nil
 }
