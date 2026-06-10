@@ -342,8 +342,8 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			}
 
 			var count int
-			for _, pvc := range podList.Items {
-				if jentingiov1.IsAnnotationExists(&pvc, jentingiov1.ProjectResourceQuotaAnnotation) {
+			for _, pod := range podList.Items {
+				if jentingiov1.IsAnnotationExists(&pod, jentingiov1.ProjectResourceQuotaAnnotation) {
 					count++
 				}
 			}
@@ -454,8 +454,8 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			}
 
 			var count int
-			for _, pvc := range rcList.Items {
-				if jentingiov1.IsAnnotationExists(&pvc, jentingiov1.ProjectResourceQuotaAnnotation) {
+			for _, rc := range rcList.Items {
+				if jentingiov1.IsAnnotationExists(&rc, jentingiov1.ProjectResourceQuotaAnnotation) {
 					count++
 				}
 			}
