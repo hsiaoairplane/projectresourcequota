@@ -68,7 +68,9 @@ func (a *secretAnnotator) Default(ctx context.Context, secret *corev1.Secret) er
 				return nil
 			}
 
-			AddAnnotation(secret, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(secret, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("Secret annotated")
 			return nil
 		}

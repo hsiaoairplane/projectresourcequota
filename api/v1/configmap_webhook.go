@@ -68,7 +68,9 @@ func (a *configMapAnnotator) Default(ctx context.Context, cm *corev1.ConfigMap) 
 				return nil
 			}
 
-			AddAnnotation(cm, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(cm, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("ConfigMap annotated")
 			return nil
 		}

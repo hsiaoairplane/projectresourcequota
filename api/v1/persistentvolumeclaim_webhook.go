@@ -68,7 +68,9 @@ func (a *persistentVolumeClaimAnnotator) Default(ctx context.Context, pvc *corev
 				return nil
 			}
 
-			AddAnnotation(pvc, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(pvc, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("PersistentVolumeClaim annotated")
 			return nil
 		}

@@ -68,7 +68,9 @@ func (a *serviceAnnotator) Default(ctx context.Context, svc *corev1.Service) err
 				return nil
 			}
 
-			AddAnnotation(svc, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(svc, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("Service annotated")
 			return nil
 		}

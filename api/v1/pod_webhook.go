@@ -69,7 +69,9 @@ func (a *podAnnotator) Default(ctx context.Context, pod *corev1.Pod) error {
 				return nil
 			}
 
-			AddAnnotation(pod, ProjectResourceQuotaAnnotation, prq.Name)
+			if err := AddAnnotation(pod, ProjectResourceQuotaAnnotation, prq.Name); err != nil {
+				return err
+			}
 			log.Info("Pod annotated")
 			return nil
 		}
