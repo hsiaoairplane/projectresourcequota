@@ -75,6 +75,15 @@ spec:
             description: ProjectResourceQuotaStatus defines the observed state of
               ProjectResourceQuota
             properties:
+              namespaces:
+                description: |-
+                  Namespaces records the spec.namespaces that were last reconciled into
+                  status.used. It is used to detect namespaces removed from spec.namespaces
+                  so the project annotation can be cleaned up from their objects, without
+                  depending on the kubectl last-applied-configuration annotation.
+                items:
+                  type: string
+                type: array
               used:
                 additionalProperties:
                   anyOf:

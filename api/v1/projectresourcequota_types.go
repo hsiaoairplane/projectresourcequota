@@ -36,6 +36,12 @@ type ProjectResourceQuotaSpec struct {
 type ProjectResourceQuotaStatus struct {
 	//+optional
 	Used corev1.ResourceList `json:"used,omitempty" protobuf:"bytes,2,rep,name=used,casttype=ResourceList,castkey=ResourceName"`
+	// Namespaces records the spec.namespaces that were last reconciled into
+	// status.used. It is used to detect namespaces removed from spec.namespaces
+	// so the project annotation can be cleaned up from their objects, without
+	// depending on the kubectl last-applied-configuration annotation.
+	//+optional
+	Namespaces []string `json:"namespaces,omitempty"`
 }
 
 //+kubebuilder:object:root=true
