@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -265,24 +264,18 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, nil
 	}
 
-	// handle the projectresourcequota spec.namespaces removal
-	anno, ok := prq.Annotations[corev1.LastAppliedConfigAnnotation]
-	if ok {
-		oldPrq := &jentingiov1.ProjectResourceQuota{}
-		if err := json.Unmarshal([]byte(anno), oldPrq); err != nil {
-			log.Error(err, "failed to unmarshal last applied config annotation")
-			return ctrl.Result{}, nil
-		}
+	// handle the projectresourcequota spec.namespaces removal by diffing the
+	// namespaces we last reconciled (status.namespaces) against the current
+	// spec.namespaces. This does not rely on the kubectl
+	// last-applied-configuration annotation, so it works regardless of how the
+	// CR is applied (client-side apply, server-side apply, other clients).
+	oldNamespaces := sets.NewString(prq.Status.Namespaces...)
+	newNamespaces := sets.NewString(prq.Spec.Namespaces...)
+	removedNamespaces := oldNamespaces.Difference(newNamespaces)
 
-		// handle the namespapce removal from the spec.namespaces
-		oldNamespaces := sets.NewString(oldPrq.Spec.Namespaces...)
-		newNamespaces := sets.NewString(prq.Spec.Namespaces...)
-		removedNamespaces := oldNamespaces.Difference(newNamespaces)
-
-		log.Info("Reconcile ProjectResourceQuota", "oldNamespaces", oldNamespaces, "newNamespaces", newNamespaces, "removedNamespace", removedNamespaces)
-		if err := r.removeAnnotationFromObjects(ctx, log, prq.Name, removedNamespaces); err != nil {
-			return ctrl.Result{}, err
-		}
+	log.Info("Reconcile ProjectResourceQuota", "oldNamespaces", oldNamespaces, "newNamespaces", newNamespaces, "removedNamespace", removedNamespaces)
+	if err := r.removeAnnotationFromObjects(ctx, log, prq.Name, removedNamespaces); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	if prq.Status.Used == nil {
@@ -536,6 +529,10 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			}
 		}
 	}
+
+	// record the namespaces we just reconciled so the next reconcile can detect
+	// any namespaces removed from spec.namespaces
+	prq.Status.Namespaces = prq.Spec.Namespaces
 
 	if err := r.Status().Update(ctx, prq); err != nil {
 		return ctrl.Result{}, err
