@@ -19,9 +19,26 @@ package v1
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	resourcehelper "k8s.io/component-helpers/resource"
 )
+
+// PodEffectiveRequests returns the pod's effective resource requests, accounting
+// for init and sidecar containers the same way the native Kubernetes
+// ResourceQuota admission does: for each resource the effective amount is the
+// larger of the sum across regular containers and the amount held by init
+// containers (always-restarting sidecar containers are added to the sum).
+func PodEffectiveRequests(pod *corev1.Pod) corev1.ResourceList {
+	return resourcehelper.PodRequests(pod, resourcehelper.PodResourcesOptions{})
+}
+
+// PodEffectiveLimits returns the pod's effective resource limits, following the
+// same init/sidecar-aware rules as PodEffectiveRequests.
+func PodEffectiveLimits(pod *corev1.Pod) corev1.ResourceList {
+	return resourcehelper.PodLimits(pod, resourcehelper.PodResourcesOptions{})
+}
 
 func AddFinalizer(name string, obj runtime.Object) error {
 	metadata, err := meta.Accessor(obj)

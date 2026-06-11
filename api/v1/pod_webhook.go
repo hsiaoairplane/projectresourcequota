@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -109,47 +108,23 @@ func (v *podValidator) ValidateCreate(ctx context.Context, pod *corev1.Pod) (adm
 		return nil, fmt.Errorf("over project resource quota. current %s counts %v, hard limit count %v", corev1.ResourcePods, used.String(), hard.String())
 	}
 
-	// calculate resource requests and limits
-	var cpu, memory, storage, ephemeralStorage resource.Quantity
-	var requestCPU, requestMemory, requestStorage, requestEphemeralStorage resource.Quantity
-	var limitCPU, limitMemory, limitEphemeralStorage resource.Quantity
-	for _, container := range pod.Spec.Containers {
-		// without requests prefix
-		quality := container.Resources.Requests.Cpu()
-		if quality != nil {
-			cpu.Add(*quality)
-			requestCPU.Add(*quality)
-		}
-		quality = container.Resources.Requests.Memory()
-		if quality != nil {
-			memory.Add(*quality)
-			requestMemory.Add(*quality)
-		}
-		quality = container.Resources.Requests.Storage()
-		if quality != nil {
-			storage.Add(*quality)
-			requestStorage.Add(*quality)
-		}
-		quality = container.Resources.Requests.StorageEphemeral()
-		if quality != nil {
-			ephemeralStorage.Add(*quality)
-			requestEphemeralStorage.Add(*quality)
-		}
+	// calculate the pod's effective resource requests and limits, accounting
+	// for init and sidecar containers like the native ResourceQuota does
+	requests := PodEffectiveRequests(pod)
+	limits := PodEffectiveLimits(pod)
 
-		// limits
-		quality = container.Resources.Limits.Cpu()
-		if quality != nil {
-			limitCPU.Add(*quality)
-		}
-		quality = container.Resources.Limits.Memory()
-		if quality != nil {
-			limitMemory.Add(*quality)
-		}
-		quality = container.Resources.Limits.StorageEphemeral()
-		if quality != nil {
-			limitEphemeralStorage.Add(*quality)
-		}
-	}
+	// "cpu"/"memory"/... without the requests prefix map to the same request values
+	cpu := requests[corev1.ResourceCPU]
+	memory := requests[corev1.ResourceMemory]
+	storage := requests[corev1.ResourceStorage]
+	ephemeralStorage := requests[corev1.ResourceEphemeralStorage]
+	requestCPU := requests[corev1.ResourceCPU]
+	requestMemory := requests[corev1.ResourceMemory]
+	requestStorage := requests[corev1.ResourceStorage]
+	requestEphemeralStorage := requests[corev1.ResourceEphemeralStorage]
+	limitCPU := limits[corev1.ResourceCPU]
+	limitMemory := limits[corev1.ResourceMemory]
+	limitEphemeralStorage := limits[corev1.ResourceEphemeralStorage]
 
 	// without requests prefix
 	used = prq.Status.Used[corev1.ResourceCPU]
