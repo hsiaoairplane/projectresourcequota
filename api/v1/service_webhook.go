@@ -152,7 +152,7 @@ func (v *serviceValidator) ValidateCreate(ctx context.Context, svc *corev1.Servi
 func (v *serviceValidator) ValidateUpdate(ctx context.Context, oldSvc, newSvc *corev1.Service) (admission.Warnings, error) {
 	log := logf.FromContext(ctx)
 
-	log.Info("Validating Service creation")
+	log.Info("Validating Service update")
 	prqName, found := newSvc.Annotations[ProjectResourceQuotaAnnotation]
 	if !found {
 		return nil, fmt.Errorf("missing annotation %s", ProjectResourceQuotaAnnotation)

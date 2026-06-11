@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,97 +114,40 @@ func (v *podValidator) ValidateCreate(ctx context.Context, pod *corev1.Pod) (adm
 	requests := PodEffectiveRequests(pod)
 	limits := PodEffectiveLimits(pod)
 
+	// checkQuota rejects the pod when its request for the resource, added to the
+	// project's current usage, would exceed the hard limit. The reported request
+	// is the incoming pod's amount (before adding the existing usage).
+	checkQuota := func(name corev1.ResourceName, request resource.Quantity) error {
+		used := prq.Status.Used[name]
+		hard := prq.Spec.Hard[name]
+		total := request.DeepCopy()
+		total.Add(used)
+		if total.Cmp(hard) == 1 {
+			return fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", name, request.String(), used.String(), hard.String())
+		}
+		return nil
+	}
+
 	// "cpu"/"memory"/... without the requests prefix map to the same request values
-	cpu := requests[corev1.ResourceCPU]
-	memory := requests[corev1.ResourceMemory]
-	storage := requests[corev1.ResourceStorage]
-	ephemeralStorage := requests[corev1.ResourceEphemeralStorage]
-	requestCPU := requests[corev1.ResourceCPU]
-	requestMemory := requests[corev1.ResourceMemory]
-	requestStorage := requests[corev1.ResourceStorage]
-	requestEphemeralStorage := requests[corev1.ResourceEphemeralStorage]
-	limitCPU := limits[corev1.ResourceCPU]
-	limitMemory := limits[corev1.ResourceMemory]
-	limitEphemeralStorage := limits[corev1.ResourceEphemeralStorage]
-
-	// without requests prefix
-	used = prq.Status.Used[corev1.ResourceCPU]
-	hard = prq.Spec.Hard[corev1.ResourceCPU]
-	cpu.Add(used)
-	if cpu.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceCPU, cpu.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceMemory]
-	hard = prq.Spec.Hard[corev1.ResourceMemory]
-	memory.Add(used)
-	if memory.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceMemory, memory.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceStorage]
-	hard = prq.Spec.Hard[corev1.ResourceStorage]
-	storage.Add(used)
-	if storage.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceStorage, storage.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceEphemeralStorage]
-	hard = prq.Spec.Hard[corev1.ResourceEphemeralStorage]
-	ephemeralStorage.Add(used)
-	if ephemeralStorage.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceEphemeralStorage, ephemeralStorage.String(), used.String(), hard.String())
-	}
-
-	// with requests prefix
-	used = prq.Status.Used[corev1.ResourceRequestsCPU]
-	hard = prq.Spec.Hard[corev1.ResourceRequestsCPU]
-	requestCPU.Add(used)
-	if requestCPU.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsCPU, requestCPU.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceRequestsMemory]
-	hard = prq.Spec.Hard[corev1.ResourceRequestsMemory]
-	requestMemory.Add(used)
-	if requestMemory.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsMemory, requestMemory.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceRequestsStorage]
-	hard = prq.Spec.Hard[corev1.ResourceRequestsStorage]
-	requestStorage.Add(used)
-	if requestStorage.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsStorage, requestStorage.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceRequestsEphemeralStorage]
-	hard = prq.Spec.Hard[corev1.ResourceRequestsEphemeralStorage]
-	requestEphemeralStorage.Add(used)
-	if requestEphemeralStorage.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %s + used %s > hard limit %s", corev1.ResourceRequestsEphemeralStorage, requestEphemeralStorage.String(), used.String(), hard.String())
-	}
-
-	// limits
-	used = prq.Status.Used[corev1.ResourceLimitsCPU]
-	hard = prq.Spec.Hard[corev1.ResourceLimitsCPU]
-	limitCPU.Add(used)
-	if limitCPU.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsCPU, limitCPU.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceLimitsMemory]
-	hard = prq.Spec.Hard[corev1.ResourceLimitsMemory]
-	limitMemory.Add(used)
-	if limitMemory.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsMemory, limitMemory.String(), used.String(), hard.String())
-	}
-
-	used = prq.Status.Used[corev1.ResourceLimitsEphemeralStorage]
-	hard = prq.Spec.Hard[corev1.ResourceLimitsEphemeralStorage]
-	limitEphemeralStorage.Add(used)
-	if limitEphemeralStorage.Cmp(hard) == 1 {
-		return nil, fmt.Errorf("over project resource quota. %s request %v + used %v > hard limit %v", corev1.ResourceLimitsEphemeralStorage, limitEphemeralStorage.String(), used.String(), hard.String())
+	for _, check := range []struct {
+		name    corev1.ResourceName
+		request resource.Quantity
+	}{
+		{corev1.ResourceCPU, requests[corev1.ResourceCPU]},
+		{corev1.ResourceMemory, requests[corev1.ResourceMemory]},
+		{corev1.ResourceStorage, requests[corev1.ResourceStorage]},
+		{corev1.ResourceEphemeralStorage, requests[corev1.ResourceEphemeralStorage]},
+		{corev1.ResourceRequestsCPU, requests[corev1.ResourceCPU]},
+		{corev1.ResourceRequestsMemory, requests[corev1.ResourceMemory]},
+		{corev1.ResourceRequestsStorage, requests[corev1.ResourceStorage]},
+		{corev1.ResourceRequestsEphemeralStorage, requests[corev1.ResourceEphemeralStorage]},
+		{corev1.ResourceLimitsCPU, limits[corev1.ResourceCPU]},
+		{corev1.ResourceLimitsMemory, limits[corev1.ResourceMemory]},
+		{corev1.ResourceLimitsEphemeralStorage, limits[corev1.ResourceEphemeralStorage]},
+	} {
+		if err := checkQuota(check.name, check.request); err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
