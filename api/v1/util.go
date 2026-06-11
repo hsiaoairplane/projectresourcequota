@@ -30,12 +30,17 @@ import (
 // ResourceQuota admission does: for each resource the effective amount is the
 // larger of the sum across regular containers and the amount held by init
 // containers (always-restarting sidecar containers are added to the sum).
+//
+// Pod overhead (pod.Spec.Overhead, populated from the RuntimeClass for
+// sandboxed runtimes such as Kata or gVisor) is included, matching the native
+// quota. For the common runc runtime overhead is empty and contributes nothing.
 func PodEffectiveRequests(pod *corev1.Pod) corev1.ResourceList {
 	return resourcehelper.PodRequests(pod, resourcehelper.PodResourcesOptions{})
 }
 
 // PodEffectiveLimits returns the pod's effective resource limits, following the
-// same init/sidecar-aware rules as PodEffectiveRequests.
+// same init/sidecar-aware rules (and pod overhead inclusion) as
+// PodEffectiveRequests.
 func PodEffectiveLimits(pod *corev1.Pod) corev1.ResourceList {
 	return resourcehelper.PodLimits(pod, resourcehelper.PodResourcesOptions{})
 }
