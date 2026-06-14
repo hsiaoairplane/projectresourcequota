@@ -320,10 +320,16 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 
 			var count int
 			for _, pod := range podList.Items {
-				if jentingiov1.IsAnnotationExists(&pod, jentingiov1.ProjectResourceQuotaAnnotation) {
-					count++
+				// only count non-terminal pods that belong to this project
+				if !jentingiov1.IsAnnotationExists(&pod, jentingiov1.ProjectResourceQuotaAnnotation) {
+					continue
 				}
+				if isPodTerminated(&pod) {
+					continue
+				}
+				count++
 			}
+
 			used := prq.Status.Used[corev1.ResourcePods]
 			used.Add(resource.MustParse(fmt.Sprintf("%d", count)))
 			prq.Status.Used[corev1.ResourcePods] = used
@@ -331,6 +337,14 @@ func (r *ProjectResourceQuotaReconciler) Reconcile(ctx context.Context, req ctrl
 			totalRequests := corev1.ResourceList{}
 			totalLimits := corev1.ResourceList{}
 			for _, pod := range podList.Items {
+				// only sum non-terminal pods that belong to this project
+				if !jentingiov1.IsAnnotationExists(&pod, jentingiov1.ProjectResourceQuotaAnnotation) {
+					continue
+				}
+				if isPodTerminated(&pod) {
+					continue
+				}
+
 				// account for init and sidecar containers like the native ResourceQuota
 				addResourceList(totalRequests, jentingiov1.PodEffectiveRequests(&pod))
 				addResourceList(totalLimits, jentingiov1.PodEffectiveLimits(&pod))
@@ -554,6 +568,13 @@ func addResourceList(dst, src corev1.ResourceList) {
 			dst[name] = quantity.DeepCopy()
 		}
 	}
+}
+
+// isPodTerminated reports whether the pod is in a terminal phase (Failed or
+// Succeeded). Terminal pods no longer consume resources and must not count
+// toward the project resource quota.
+func isPodTerminated(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodFailed || pod.Status.Phase == corev1.PodSucceeded
 }
 
 func (r *ProjectResourceQuotaReconciler) findObjects(ctx context.Context, obj client.Object) []reconcile.Request {
