@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/go-logr/logr"
-	jentingiov1 "github.com/jenting/projectresourcequota/api/v1"
+	jentingiov1 "github.com/hsiaoairplane/projectresourcequota/api/v1"
 )
 
 // ProjectResourceQuotaReconciler reconciles a ProjectResourceQuota object

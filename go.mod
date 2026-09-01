@@ -1,4 +1,4 @@
-module github.com/jenting/projectresourcequota
+module github.com/hsiaoairplane/projectresourcequota
 
 go 1.26.0
 
