@@ -6,14 +6,14 @@ domain: jenting.io
 layout:
 - go.kubebuilder.io/v4-alpha
 projectName: projectresourcequota
-repo: github.com/jenting/projectresourcequota
+repo: github.com/hsiaoairplane/projectresourcequota
 resources:
 - api:
     crdVersion: v1
   controller: true
   domain: jenting.io
   kind: ProjectResourceQuota
-  path: github.com/jenting/projectresourcequota/api/v1
+  path: github.com/hsiaoairplane/projectresourcequota/api/v1
   version: v1
   webhooks:
     defaulting: true

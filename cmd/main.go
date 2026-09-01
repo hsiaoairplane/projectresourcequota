@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	jentingiov1 "github.com/jenting/projectresourcequota/api/v1"
-	"github.com/jenting/projectresourcequota/internal/controller"
+	jentingiov1 "github.com/hsiaoairplane/projectresourcequota/api/v1"
+	"github.com/hsiaoairplane/projectresourcequota/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 

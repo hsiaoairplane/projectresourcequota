@@ -14,7 +14,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	jentingiov1 "github.com/jenting/projectresourcequota/api/v1"
+	jentingiov1 "github.com/hsiaoairplane/projectresourcequota/api/v1"
 )
 
 func TestAddResourceList(t *testing.T) {

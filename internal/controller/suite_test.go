@@ -14,7 +14,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	jentingiov1 "github.com/jenting/projectresourcequota/api/v1"
+	jentingiov1 "github.com/hsiaoairplane/projectresourcequota/api/v1"
 	//+kubebuilder:scaffold:imports
 )
 
